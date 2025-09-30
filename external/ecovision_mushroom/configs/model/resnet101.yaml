@@ -1,0 +1,6 @@
+# @package model
+defaults:
+  - resnet50
+
+net:
+  _target_: torchvision.models.resnet101

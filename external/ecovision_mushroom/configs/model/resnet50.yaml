@@ -1,0 +1,29 @@
+_target_: src.models.module.ClassificationLitModule
+
+num_classes: ${data.num_classes}
+
+optimizer:
+  _target_: torch.optim.AdamW
+  _partial_: true
+  lr: 0.001
+  weight_decay: 1e-4
+
+#scheduler:
+#  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+#  _partial_: true
+#  mode: min
+#  factor: 0.1
+#  patience: 10
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+  _partial_: True
+  T_max: ${trainer.max_epochs}
+  eta_min: 1e-6
+
+net:
+  _target_: torchvision.models.resnet50
+  num_classes: ${model.num_classes}
+
+# compile model for faster training with pytorch 2.0
+compile: true

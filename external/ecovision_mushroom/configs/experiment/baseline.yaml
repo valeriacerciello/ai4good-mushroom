@@ -1,0 +1,39 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=filename
+
+defaults:
+  - override /data: mushroom
+  - override /model: resnet50
+  - override /callbacks: default
+  - override /trainer: default
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["mushroom", "resnet50", "baseline"]
+
+# Fix a seed for lightning to make experiments (hopefully) deterministic
+# https://lightning.ai/docs/pytorch/stable/api/lightning.pytorch.utilities.seed.html
+seed: 12345
+
+trainer:
+  min_epochs: 1
+  max_epochs: 20
+
+model:
+  optimizer:
+    lr: 0.001
+    weight_decay: 1e-4
+  compile: true  # just-int-time pytorch compilation for faster training
+
+data:
+  batch_size: 128
+  num_workers: 16
+
+logger:
+  wandb:
+    project: "mushroom"
+    tags: ${tags}
+    name: "ResNet50"
