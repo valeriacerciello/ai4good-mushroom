@@ -1,0 +1,75 @@
+_target_: src.data.datamodule.MushroomDataModule
+data_dir: ${paths.data_dir}
+num_classes: 169
+
+# Adjust these to modulate speed and memory
+batch_size: 128
+num_workers: 16
+pin_memory: True
+
+# Images in the mushroom dataset have an average shape of (459 x 468).
+# At training and inference time, we need to resize images to the same
+# shape in order to stack them in mini-batch tensors. This is what
+# `image_size` rules. By increasing `image_size`, the model might
+# better capture fine-grained details but training/inference will be
+# more compute and memory intensive.
+image_size: 384
+
+# Pre-computed dataset statistics used for image normalization
+rgb_mean: [0.4308, 0.4084, 0.3393]
+rgb_std: [0.1063, 0.1023, 0.1123]
+
+# Setting `mini` will subsample the train dataset so that each class has
+# `mini` images. The val and test set will be left untouched. This can
+# be used to accelerate experimentation, but `mini` should be set to
+# `null` for the final runs
+mini: null
+
+# CPU-based train transforms
+# Here you can call any transform from `torchvision.transforms`
+# (see https://docs.pytorch.org/vision/0.9/transforms.html) or
+# additional transforms that you might have implemented in
+# `src.transforms`
+train_transform:
+  - transform: RandomResizedCrop
+    params:
+      size: ${data.image_size}
+      scale: [0.08, 1.0]
+      ratio: [0.7, 1.33]
+  - transform: RandomHorizontalFlip
+  - transform: ColorJitter
+    params:
+      brightness: 0.4
+      contrast: 0.4
+      saturation: 0.4
+      hue: 0.1
+  - transform: ToTensor
+  - transform: Normalize
+    params:
+      mean: ${data.rgb_mean}
+      std: ${data.rgb_std}
+
+# CPU-based val transforms
+# Here you can call any transform from `torchvision.transforms`
+# (see https://docs.pytorch.org/vision/0.9/transforms.html) or
+# additional transforms that you might have implemented in
+# `src.transforms`
+val_transform:
+  - transform: Resize
+    params:
+      size: 440
+  - transform: CenterCrop
+    params:
+      size: ${data.image_size}
+  - transform: ToTensor
+  - transform: Normalize
+    params:
+      mean: ${data.rgb_mean}
+      std: ${data.rgb_std}
+
+# CPU-based test transforms
+# Here you can call any transform from `torchvision.transforms`
+# (see https://docs.pytorch.org/vision/0.9/transforms.html) or
+# additional transforms that you might have implemented in
+# `src.transforms`
+test_transform: ${data.val_transform}
