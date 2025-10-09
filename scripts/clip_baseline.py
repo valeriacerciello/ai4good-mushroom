@@ -7,7 +7,8 @@ from sklearn.linear_model import LogisticRegression
 from tqdm import tqdm
 
 ROOT_DEFAULT = "/zfs/ai4good/datasets/mushroom"
-USER = os.environ.get("USER", "vcerci")
+USER_NAME=input("input your user name: ")
+USER = os.environ.get("USER", USER_NAME)          
 CACHE_DEFAULT = f"/zfs/ai4good/student/{USER}/cache/open_clip"
 
 CAND_IMAGE_COLS = ["image_path","filepath","path","image","img_path","file"]

@@ -8,7 +8,7 @@ This script runs a quick CLIP sanity check on our mushroom dataset:
 Activate your env (already set up):
 
 ```bash
-conda activate /zfs/ai4good/student/vcerci/conda_envs/mushroom
+conda activate /zfs/ai4good/student/<your_user_name>/conda_envs/mushroom
 ```
 Install deps (first time only):
 
