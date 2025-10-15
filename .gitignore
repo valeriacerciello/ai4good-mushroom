@@ -205,3 +205,28 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+
+# large data + caches (keep only a tiny README in data/)
+data/**
+!data/README.md
+
+# model artifacts & results
+features/**
+results/**
+lightning_logs/**
+wandb/**
+mlruns/**
+
+# common numeric caches
+*.npz
+*.npy
+*.pt
+
+# Hydra logs in the external Lightning project
+external/ecovision_mushroom/.hydra/**
+external/ecovision_mushroom/logs/**
+
+# macOS cruft
+.DS_Store
+
