@@ -22,18 +22,26 @@ import open_clip
 import matplotlib.pyplot as plt
 import csv
 import pandas as pd
+from sklearn.metrics import f1_score
 from scripts.few_shot import ensure_features, load_labels, prototype_classifier, train_linear_probe, topk_acc, balanced_acc
 
 
 def zero_shot_scores(label_names, backbone, pretrained, device):
+	print("creating model")
 	model, _, _ = open_clip.create_model_and_transforms(backbone, pretrained=pretrained, device=device)
+	print("evaluatemodel")
 	model.eval()
+	print("get tocken")
 	tokenizer = open_clip.get_tokenizer(backbone)
 	prompts = [f"a photo of {n}" for n in label_names]
+	print("start encoding text")
 	with torch.no_grad():
 		T = tokenizer(prompts).to(device)
+		print("encode text")
 		text = model.encode_text(T)
+		print("normalize")
 		text = text / text.norm(dim=-1, keepdim=True)
+		print("transopse")
 		text = text.float().cpu().numpy().T  # [D, K]
 	return text
 
@@ -45,7 +53,7 @@ class Args:
     labels = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/labels.tsv"
     backbone = "ViT-B-32-quickgelu"
     pretrained = "openai"
-    shots = [1, 5]
+    shots = [0, 1, 5, 10, 20]
     splits = ["val", "test"]
     save_dir = "features"
     results_dir = "results"
@@ -99,7 +107,9 @@ def main():
 		yhat_zs = np.argmax(scores_zs, axis=1)
 		zs_top1 = (yhat_zs == y_te).mean()
 		zs_bal = balanced_acc(y_te, yhat_zs, K)
-		records.append((0, "zero-shot", zs_top1, zs_bal, None))
+		zs_top5 = topk_acc(y_te, scores_zs, 5)
+		zs_macro = f1_score(y_te, yhat_zs, average='macro')
+		records.append((0, "zero-shot", zs_top1, zs_top5, zs_bal, zs_macro))
 		print(f"shot=0: zs top1={zs_top1:.4f}")
 
 	print("~~~~~~~~~~~~~few shot~~~~~~~~~~~~~~~~")
@@ -120,7 +130,9 @@ def main():
 		yhat_proto = np.argmax(scores_proto, axis=1)
 		proto_top1 = (yhat_proto == y_te).mean()
 		proto_bal = balanced_acc(y_te, yhat_proto, K)
-		records.append((shot, "prototype", proto_top1, proto_bal, None))
+		proto_top5 = topk_acc(y_te, scores_proto, 5)
+		proto_macro = f1_score(y_te, yhat_proto, average='macro')
+		records.append((shot, "prototype", proto_top1, proto_top5, proto_bal, proto_macro))
 
 		# linear probe
 		print("~~~~~~~~~~~~~linear probe~~~~~~~~~~~~~~~~")
@@ -132,7 +144,9 @@ def main():
 			yhat_lin = np.argmax(logits, axis=1)
 		lin_top1 = (yhat_lin == y_te).mean()
 		lin_bal = balanced_acc(y_te, yhat_lin, K)
-		records.append((shot, "linear", lin_top1, lin_bal, None))
+		lin_top5 = topk_acc(y_te, logits, 5)
+		lin_macro = f1_score(y_te, yhat_lin, average='macro')
+		records.append((shot, "linear", lin_top1, lin_top5, lin_bal, lin_macro))
 
 		print(f"shot={shot}: proto top1={proto_top1:.4f}, lin top1={lin_top1:.4f}")
 
@@ -141,7 +155,8 @@ def main():
 	out_csv = os.path.join(args.results_dir, f"few_shot_table_{args.backbone.replace(' ','_')}.csv")
 	with open(out_csv, "w", newline="", encoding="utf-8") as f:
 		w = csv.writer(f)
-		w.writerow(["shot","model","top1","balanced_acc","notes"])
+		# columns: shot, model, top1, top5, balanced_acc, macro_f1 (consistent with few_shot.py)
+		w.writerow(["shot","model","top1","top5","balanced_acc","macro_f1"])
 		for r in records:
 			w.writerow(r)
 	print(f"Wrote table -> {out_csv}")
@@ -150,7 +165,7 @@ def main():
 	# gather plot data
 	print("~~~~~~~~~~~~~splot~~~~~~~~~~~~~~~~")
 	import pandas as pd
-	df = pd.DataFrame(records, columns=["shot","model","top1","balanced_acc","notes"])
+	df = pd.DataFrame(records, columns=["shot","model","top1","top5","balanced_acc","macro_f1"])
 	pivot = df.pivot(index="shot", columns="model", values="top1")
 	pivot = pivot.reindex(sorted(pivot.index))
 

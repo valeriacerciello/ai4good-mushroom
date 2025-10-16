@@ -141,8 +141,9 @@ def train_linear_probe(X_support, y_support, X_val=None, y_val=None, epochs=200,
         model.load_state_dict(best_state)
     return model
 
-def evaluate_predictions(y_true, y_pred, K):
-    top1 = (y_pred == y_true).mean()
+def evaluate_predictions(y_true, y_pred, score, K):
+    top1 = topk_acc(y_true, score, 1)
+    top5 = topk_acc(y_true, score, 5)
     bal = balanced_acc(y_true, y_pred, K)
     macro = f1_score(y_true, y_pred, average='macro')
     return top1, bal, macro
@@ -193,7 +194,10 @@ def main():
         # scores: X_te [N, D] dot prototypes.T [D, K]
         scores_proto = X_te @ prototypes.T
         yhat_proto = np.argmax(scores_proto, axis=1)
-        proto_top1, proto_bal, proto_macro = evaluate_predictions(y_te, yhat_proto, K)
+
+        # compute top1, top5, balanced acc and macro f1 for prototype
+        proto_top1, proto_top5, proto_bal, proto_macro = evaluate_predictions(y_te, yhat_proto, scores_proto, K)
+        
 
         # Linear probe
         device = args.device
@@ -203,19 +207,25 @@ def main():
             xt = torch.from_numpy(X_te).float().to(device)
             logits = model(xt).cpu().numpy()
             yhat_lin = np.argmax(logits, axis=1)
-        lin_top1, lin_bal, lin_macro = evaluate_predictions(y_te, yhat_lin, K)
+
+        # compute top1, top5, balanced acc and macro f1 for linear probe
+        lin_top1, lin_top5, lin_bal, lin_macro = evaluate_predictions(y_te, yhat_lin, logits, K)
+        # for linear probe we can use logits for topk
+        # lin_top5 = topk_acc(y_te, logits, 5)
 
         print(f"shot={shot}: prototype top1={proto_top1:.4f} bal={proto_bal:.4f} macro={proto_macro:.4f}")
         print(f"shot={shot}: linear    top1={lin_top1:.4f} bal={lin_bal:.4f} macro={lin_macro:.4f}")
 
-        results.append((shot, "prototype", proto_top1, proto_bal, proto_macro))
-        results.append((shot, "linear", lin_top1, lin_bal, lin_macro))
+        # append with top5 and macro f1 to match eval_zero_shot.py ordering
+        results.append((shot, "prototype", proto_top1, proto_top5, proto_bal, proto_macro))
+        results.append((shot, "linear", lin_top1, lin_top5, lin_bal, lin_macro))
 
     out_csv = os.path.join(args.results_dir, f"few_shot_metrics_{args.backbone.replace(' ','_')}.csv")
     import csv
     with open(out_csv, "w", encoding="utf-8", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["shot","model","top1","balanced_acc","macro_f1"])
+        # columns: shot, model, top1, top5, balanced_acc, macro_f1 (consistent with eval_zero_shot.py)
+        w.writerow(["shot","model","top1","top5","balanced_acc","macro_f1"])
         for row in results:
             w.writerow(row)
     print(f"Wrote results → {out_csv}")
