@@ -28,7 +28,6 @@ def load_labels(labels_tsv):
     name2id = {n:i for i,n in zip(ids,names)}
     return np.array(names, dtype=object), name2id
 
-
 def ensure_features(split, backbone, data_root, csv_path, labels_tsv, save_dir="features", pretrained="openai", device=None):
     npz = Path(save_dir)/backbone/f"{split}.npz"
     if npz.exists():
@@ -39,12 +38,10 @@ def ensure_features(split, backbone, data_root, csv_path, labels_tsv, save_dir="
     assert ec==0, "Feature dump failed"
     z=np.load(npz, allow_pickle=True); return z["X"], z["y"], z["paths"]
 
-
 def topk_acc(y_true, scores, k):
     k = min(k, scores.shape[1])
     topk = np.argsort(-scores, axis=1)[:, :k]
     return (topk == y_true[:,None]).any(axis=1).mean()
-
 
 def balanced_acc(y_true, y_pred, K):
     cm = confusion_matrix(y_true, y_pred, labels=np.arange(K))
@@ -87,7 +84,6 @@ def prototype_classifier(X_support, y_support, K):
         prototypes[k] = p
     return prototypes
 
-
 class LinearProbe(nn.Module):
     def __init__(self, dim, K):
         super().__init__()
@@ -95,7 +91,6 @@ class LinearProbe(nn.Module):
 
     def forward(self, x):
         return self.linear(x)
-
 
 def train_linear_probe(X_support, y_support, X_val=None, y_val=None, epochs=200, lr=1e-2, batch_size=32, device="cpu", seed=42):
     torch.manual_seed(seed)
@@ -146,22 +141,22 @@ def train_linear_probe(X_support, y_support, X_val=None, y_val=None, epochs=200,
         model.load_state_dict(best_state)
     return model
 
-
 def evaluate_predictions(y_true, y_pred, K):
     top1 = (y_pred == y_true).mean()
     bal = balanced_acc(y_true, y_pred, K)
     macro = f1_score(y_true, y_pred, average='macro')
     return top1, bal, macro
 
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data-root", required=True)
     ap.add_argument("--train-csv", required=True)
+    ap.add_argument("--val-csv", required=True)
     ap.add_argument("--test-csv", required=True)
     ap.add_argument("--labels", required=True)
-    ap.add_argument("--backbone", default="ViT-B-32")
+    ap.add_argument("--backbone", default="ViT-B-32-quickgelu")
     ap.add_argument("--pretrained", default="openai")
+    ap.add_argument("--splits", nargs="+", default=["val"])
     ap.add_argument("--shots", nargs="+", type=int, default=[1,5,10,20])
     ap.add_argument("--save-dir", default="features")
     ap.add_argument("--results-dir", default="results")
