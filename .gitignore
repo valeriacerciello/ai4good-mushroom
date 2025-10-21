@@ -244,3 +244,6 @@ results/**
 # track generated prompt JSONs
 !data/prompts/
 !data/prompts/**
+
+!results/metrics/
+!results/metrics/**
