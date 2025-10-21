@@ -231,3 +231,7 @@ external/ecovision_mushroom/logs/**
 # macOS cruft
 .DS_Store
 
+
+# allow BLIP preview artifacts
+!results/examples/
+!results/examples/**
