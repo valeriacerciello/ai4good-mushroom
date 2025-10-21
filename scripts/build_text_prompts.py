@@ -80,12 +80,11 @@ PLAIN_TEMPLATES = [
     "a natural habitat photo of {CLASS} mushroom",
 ]
 
-# We’ll generate multiple lighting variants; don’t hard-wire a single one.
+# Lighting only appears in the enriched prompts.
 LIGHTING_VARIANTS = ["in bright daylight", "in moderate light", "in low light"]
 
 def render_attr_phrase(attrs: Dict[str, List[str]]) -> str:
     parts = []
-    # join fields only if we have values
     if "cap_color" in attrs:
         parts.append(f"cap {attrs['cap_color'][0]}")
     if "surface" in attrs:
@@ -127,14 +126,35 @@ def build_prompts_for_class(cls: str,
 
     return dedup_keep_order(plain), dedup_keep_order(enriched)
 
+def build_attr_only_prompts_for_class(cls: str,
+                                      top_attrs: Dict[str, List[str]],
+                                      min_prompts: int = 4) -> List[str]:
+    """
+    Prompts with attributes but WITHOUT lighting. If no attrs → fallback to plain.
+    """
+    CLASS = titleize(cls)
+    attr_phrase = render_attr_phrase(top_attrs)
+    if attr_phrase:
+        base = [
+            "a close-up photo of {CLASS} mushroom, {ATTRS}",
+            "a scientific field photo of {CLASS}, {ATTRS}",
+            "a macro photograph of {CLASS} fungus, {ATTRS}",
+            "a natural habitat photo of {CLASS} mushroom, {ATTRS}",
+        ]
+        out = [t.format(CLASS=CLASS, ATTRS=attr_phrase) for t in base]
+    else:
+        out = [t.format(CLASS=CLASS) for t in PLAIN_TEMPLATES[:min_prompts]]
+    return dedup_keep_order(out)[:12]
+
 def main():
-    ap = argparse.ArgumentParser(description="Build per-class text prompts (plain & enriched).")
+    ap = argparse.ArgumentParser(description="Build per-class text prompts (plain, attr-only, enriched).")
     ap.add_argument("--csv", default="splits/train.csv", help="CSV with image paths and class labels")
     ap.add_argument("--csv_image_col", default="filepath")
     ap.add_argument("--csv_label_col", default="label")
     ap.add_argument("--labels_tsv", default="", help="Optional: numeric->name map; leave empty to skip")
     ap.add_argument("--attributes", default="data/prompts/blip_attributes.json")
     ap.add_argument("--out_plain", default="data/prompts/class_prompts_plain.json")
+    ap.add_argument("--out_attr", default="data/prompts/class_prompts_attr.json")
     ap.add_argument("--out_enriched", default="data/prompts/class_prompts_enriched.json")
     ap.add_argument("--top_k_per_field", type=int, default=2)
     args = ap.parse_args()
@@ -161,7 +181,6 @@ def main():
         lbl = (r[args.csv_label_col] or "").strip()
         if not img or not lbl:
             continue
-        # map numeric label to name if mapping provided
         lbl_name = labmap.get(lbl, lbl)
         class_to_images[lbl_name].append(img)
 
@@ -170,28 +189,34 @@ def main():
 
     # build prompts
     out_plain: Dict[str, List[str]] = {}
+    out_attr: Dict[str, List[str]] = {}
     out_enriched: Dict[str, List[str]] = {}
+
     for cls in sorted(class_to_images.keys()):
         p_plain, p_enriched = build_prompts_for_class(cls, top_attrs.get(cls, {}))
-        # ensure at least 4 prompts/class in plain; enriched could be larger
         if len(p_plain) < 4:
             p_plain = (p_plain + [t.format(CLASS=titleize(cls)) for t in PLAIN_TEMPLATES])[:4]
         out_plain[cls] = p_plain
         out_enriched[cls] = p_enriched[:12]  # cap for efficiency
+        out_attr[cls] = build_attr_only_prompts_for_class(cls, top_attrs.get(cls, {}))
 
-    # write
-    for path, obj in [(args.out_plain, out_plain), (args.out_enriched, out_enriched)]:
+    # write all three
+    for path, obj in [
+        (args.out_plain, out_plain),
+        (args.out_attr, out_attr),
+        (args.out_enriched, out_enriched),
+    ]:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(obj, f, ensure_ascii=False, indent=2)
 
     print("[done]")
     print(" classes:", len(out_plain))
-    some = next(iter(out_plain)) if out_plain else None
-    if some:
+    if out_plain:
+        some = next(iter(out_plain))
         print(" example class:", some)
         print("  plain:", out_plain[some][:2])
+        print("  attr-only:", out_attr[some][:2])
         print("  enriched:", out_enriched[some][:2])
 
 if __name__ == "__main__":
     main()
-

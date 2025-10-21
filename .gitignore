@@ -250,3 +250,7 @@ results/**
 
 !results/metrics/
 !results/metrics/**
+
+!data/prompts/**
+!results/metrics/**
+!results/figs/**

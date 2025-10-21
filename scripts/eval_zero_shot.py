@@ -104,6 +104,7 @@ def eval_with_text(X, y, text, K, split, backbone, results_dir, mode_tag):
 
     return dict(top1=top1, top5=top5, balanced_acc=bal, macro_f1=macro)
 
+# main
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--data-root", required=True)
@@ -116,11 +117,13 @@ def main():
     ap.add_argument("--splits", nargs="+", default=["val"])
     ap.add_argument("--results-dir", default="results")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
-    # prompt JSONs
+    # prompts
     ap.add_argument("--prompts_plain", default="data/prompts/class_prompts_plain.json")
+    ap.add_argument("--prompts_attr",  default="data/prompts/class_prompts_attr.json")
     ap.add_argument("--prompts_enriched", default="data/prompts/class_prompts_enriched.json")
-    # where to drop plain/enriched JSON metrics
-    ap.add_argument("--out_plain_json", default="results/metrics/clip_plain.json")
+    # metrics JSON outputs
+    ap.add_argument("--out_plain_json",    default="results/metrics/clip_plain.json")
+    ap.add_argument("--out_attr_json",     default="results/metrics/clip_attr.json")
     ap.add_argument("--out_enriched_json", default="results/metrics/clip_enriched.json")
     args=ap.parse_args()
 
@@ -135,34 +138,43 @@ def main():
     model.eval()
     tokenizer = open_clip.get_tokenizer(args.backbone)
 
-    # build text matrices 
-    # Fallback template keeps backward-compat with your original script
+    # build text matrices (PLAIN / ATTR / ENRICHED) 
     plain_prompts = load_prompts_json(args.prompts_plain)
+    attr_prompts  = load_prompts_json(args.prompts_attr)
     enr_prompts   = load_prompts_json(args.prompts_enriched)
 
-    T_plain = build_text_matrix_from_prompts(label_names, plain_prompts, tokenizer, model, args.device,
-                                             fallback_template="a photo of {}")
-    # Enriched may be empty for some classes -> fallback to plain template for those
-    T_enr   = build_text_matrix_from_prompts(label_names, enr_prompts, tokenizer, model, args.device,
-                                             fallback_template="a close-up photo of {} mushroom")
+    # Fallback templates keep backward-compat with your old setup
+    T_plain = build_text_matrix_from_prompts(
+        label_names, plain_prompts, tokenizer, model, args.device,
+        fallback_template="a photo of {}"
+    )
+    T_attr = build_text_matrix_from_prompts(
+        label_names, attr_prompts, tokenizer, model, args.device,
+        fallback_template="a photo of {}"  # if no attrs for a class, fall back to class-only
+    )
+    T_enr = build_text_matrix_from_prompts(
+        label_names, enr_prompts, tokenizer, model, args.device,
+        fallback_template="a close-up photo of {} mushroom"
+    )
 
-    # majority from train 
+    # majority from train (baselines)
     _, y_tr, _ = ensure_features("train", args.backbone, args.data_root, args.train_csv, args.labels, pretrained=args.pretrained)
     counts = np.bincount(y_tr, minlength=K)
     maj_cls = int(np.argmax(counts))
     top5_freq = np.argsort(-counts)[:min(5, K)]
 
     rows=[]
-    json_plain = {"model": f"{args.backbone}/{args.pretrained}", "type": "plain", "splits": {}}
-    json_enr   = {"model": f"{args.backbone}/{args.pretrained}", "type": "enriched", "splits": {}}
+    json_plain = {"model": f"{args.backbone}/{args.pretrained}", "type": "plain",       "splits": {}}
+    json_attr  = {"model": f"{args.backbone}/{args.pretrained}", "type": "attr_only",   "splits": {}}
+    json_enr   = {"model": f"{args.backbone}/{args.pretrained}", "type": "enriched",    "splits": {}}
 
     for split, csvp in [("val", args.val_csv), ("test", args.test_csv)]:
-        if split not in args.splits: 
+        if split not in args.splits:
             continue
 
         X, y, _ = ensure_features(split, args.backbone, args.data_root, csvp, args.labels, pretrained=args.pretrained)
 
-        # baselines (random/majority)
+        # baselines (random/majority) 
         rng = np.random.default_rng(42)
         y_rand   = rng.integers(0, K, size=len(y))
         rand_top1 = (y_rand == y).mean()
@@ -181,28 +193,37 @@ def main():
             (split,"majority", maj_top1,  maj_top5,  maj_bal,  maj_macro),
         ]
 
-        # zero-shot (plain)
+        # ----- zero-shot: PLAIN / ATTR / ENRICHED -----
         m_plain = eval_with_text(X, y, T_plain, K, split, args.backbone, args.results_dir, mode_tag="plain")
         rows += [(split,"zero-shot-plain", m_plain["top1"], m_plain["top5"], m_plain["balanced_acc"], m_plain["macro_f1"])]
         json_plain["splits"][split] = m_plain
 
-        # zero-shot (enriched) 
+        m_attr = eval_with_text(X, y, T_attr, K, split, args.backbone, args.results_dir, mode_tag="attr")
+        rows += [(split,"zero-shot-attr",  m_attr["top1"],  m_attr["top5"],  m_attr["balanced_acc"],  m_attr["macro_f1"])]
+        json_attr["splits"][split] = m_attr
+
         m_enr = eval_with_text(X, y, T_enr, K, split, args.backbone, args.results_dir, mode_tag="enriched")
         rows += [(split,"zero-shot-enriched", m_enr["top1"], m_enr["top5"], m_enr["balanced_acc"], m_enr["macro_f1"])]
         json_enr["splits"][split] = m_enr
 
-    # write original CSV (now with both zs variants)
+    # write CSV (contains baselines + 3 zs variants)
     out_csv = os.path.join(args.results_dir, f"metrics_{args.backbone.replace(' ','_')}.csv")
     with open(out_csv, "w", encoding="utf-8", newline="") as f:
-        w=csv.writer(f); w.writerow(["split","model","top1","top5","balanced_acc","macro_f1"]); w.writerows(rows)
+        w=csv.writer(f)
+        w.writerow(["split","model","top1","top5","balanced_acc","macro_f1"])
+        w.writerows(rows)
     print(f"Wrote metrics → {out_csv}")
 
     # write JSONs for quick comparisons
     with open(args.out_plain_json, "w") as f:
         json.dump(json_plain, f, indent=2)
+    with open(args.out_attr_json, "w") as f:
+        json.dump(json_attr, f, indent=2)
     with open(args.out_enriched_json, "w") as f:
         json.dump(json_enr, f, indent=2)
+
     print(f"Wrote JSON → {args.out_plain_json}")
+    print(f"Wrote JSON → {args.out_attr_json}")
     print(f"Wrote JSON → {args.out_enriched_json}")
 
 if __name__ == "__main__":
