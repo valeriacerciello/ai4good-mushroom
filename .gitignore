@@ -240,3 +240,7 @@ external/ecovision_mushroom/logs/**
 results/**
 !results/examples/
 !results/examples/**
+
+# track generated prompt JSONs
+!data/prompts/
+!data/prompts/**
