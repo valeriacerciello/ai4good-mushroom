@@ -235,3 +235,8 @@ external/ecovision_mushroom/logs/**
 # allow BLIP preview artifacts
 !results/examples/
 !results/examples/**
+
+# keep only preview examples from results
+results/**
+!results/examples/
+!results/examples/**
