@@ -9,7 +9,6 @@ def norm(t: str) -> str:
     t = re.sub(r"[^a-z0-9\s]", " ", t)
     return re.sub(r"\s+", " ", t).strip()
 
-# === Editable lexicons (start small; expand if coverage < 80%) ===
 COLOR_TERMS = [
     ("golden brown","golden-brown"),("dark brown","dark-brown"),("light brown","light-brown"),
     ("brown","brown"),("white","white"),("cream","cream"),("beige","beige"),("gray","gray"),
