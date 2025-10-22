@@ -1,0 +1,8 @@
+timestamp_utc: 20251022T123709Z
+git_rev: 57fb233
+python: Python 3.13.5
+torch: 2.8.0+cu128
+transformers: 4.57.1
+open_clip_torch: 2.32.0
+cmd:
+python scripts/eval_zero_shot.py --data-root ... (your args here)
