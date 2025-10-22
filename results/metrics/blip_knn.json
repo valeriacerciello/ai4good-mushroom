@@ -1,0 +1,14 @@
+{
+  "model": "Salesforce/blip-itm-base-coco",
+  "type": "blip_knn",
+  "gallery_per_class": 3,
+  "pooling": "cls",
+  "splits": {
+    "val": {
+      "top1": 0.23917776639344263,
+      "top5": 0.46509989754098363,
+      "balanced_acc": 0.2349452561106198,
+      "macro_f1": 0.21396198485804288
+    }
+  }
+}
