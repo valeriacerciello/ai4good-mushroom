@@ -15,7 +15,7 @@ from clip_utils import get_text_embeddings, SHORT_PROMPTS
 TEST_CSV = "/zfs/ai4good/datasets/mushroom/test.csv"
 ENHANCED_IMG_PROMPTS = "enhanced_mushroom_prompts.json"
 ENHANCED_COMMON_PROMPTS = "enhanced_with_common_names_prompts.json"
-DELTA_PROMPTS = "delta_prompts.json"
+DELTA_PROMPTS = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/data_prompts_label/delta_prompts.json"
 NUM_SAMPLES = 200
 TEMP = 0.12
 
