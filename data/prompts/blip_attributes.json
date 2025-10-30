@@ -1,0 +1,331 @@
+{
+  "Crucibulum laeve/Crucibulum laeve_98.jpg": {
+    "attributes": {
+      "cap_color": "white",
+      "habitat": "forest"
+    },
+    "lighting": "in low light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_49.jpg": {
+    "attributes": {
+      "cap_color": "white",
+      "habitat": "forest"
+    },
+    "lighting": "in bright daylight"
+  },
+  "Crucibulum laeve/8159medium.jpg": {
+    "attributes": {
+      "cap_color": "yellow",
+      "habitat": "forest"
+    },
+    "lighting": "in low light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_218.jpg": {
+    "attributes": {
+      "cap_color": "white",
+      "habitat": "forest"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/8107medium.jpg": {
+    "attributes": {
+      "habitat": "forest"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_173.jpg": {
+    "attributes": {
+      "cap_color": "yellow",
+      "habitat": "forest"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_35.jpg": {
+    "attributes": {
+      "cap_color": "yellow",
+      "habitat": "forest"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/8039medium.jpg": {
+    "attributes": {
+      "habitat": "forest"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/7961medium.jpg": {
+    "attributes": {
+      "habitat": "forest"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_264.jpg": {
+    "attributes": {
+      "habitat": "dead wood"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/8067medium.jpg": {
+    "attributes": {
+      "cap_color": "brown",
+      "habitat": "soil"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/7941medium.jpeg": {
+    "attributes": {
+      "habitat": "soil"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/8172medium.jpeg": {
+    "attributes": {
+      "habitat": "forest"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_174.jpg": {
+    "attributes": {
+      "cap_color": "brown",
+      "habitat": "dead wood"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_32.jpg": {
+    "attributes": {
+      "cap_color": "white",
+      "habitat": "forest"
+    },
+    "lighting": "in low light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_7.jpg": {
+    "attributes": {
+      "habitat": "dead wood"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_263.jpg": {
+    "attributes": {
+      "cap_color": "white",
+      "habitat": "forest"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/7917medium.jpg": {
+    "attributes": {
+      "habitat": "dead wood"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/8011medium.jpg": {
+    "attributes": {
+      "habitat": "dead wood"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/8148medium.jpeg": {
+    "attributes": {
+      "cap_color": "brown",
+      "habitat": "dead wood"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_108.jpg": {
+    "attributes": {
+      "cap_color": "white",
+      "habitat": "forest"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/8048medium.jpeg": {
+    "attributes": {
+      "cap_color": "yellow",
+      "habitat": "forest"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_9.jpg": {
+    "attributes": {
+      "cap_color": "orange",
+      "habitat": "dead wood"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/8158medium.jpg": {
+    "attributes": {
+      "cap_color": "yellow",
+      "habitat": "forest"
+    },
+    "lighting": "in bright daylight"
+  },
+  "Crucibulum laeve/Crucibulum laeve_106.jpg": {
+    "attributes": {
+      "cap_color": "yellow",
+      "habitat": "dead wood"
+    },
+    "lighting": "in low light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_91.jpg": {
+    "attributes": {
+      "cap_color": "white",
+      "habitat": "dead wood"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_40.jpg": {
+    "attributes": {
+      "cap_color": "yellow",
+      "habitat": "forest"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/8066medium.jpg": {
+    "attributes": {
+      "cap_color": "white",
+      "habitat": "forest"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_211.jpg": {
+    "attributes": {
+      "habitat": "dead wood"
+    },
+    "lighting": "in low light"
+  },
+  "Crucibulum laeve/8038medium.jpg": {
+    "attributes": {
+      "habitat": "dead wood"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/7960medium.jpg": {
+    "attributes": {
+      "habitat": "dead wood"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_101.jpg": {
+    "attributes": {
+      "habitat": "forest"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_96.jpg": {
+    "attributes": {
+      "habitat": "forest"
+    },
+    "lighting": "in low light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_47.jpg": {
+    "attributes": {
+      "habitat": "forest"
+    },
+    "lighting": "in low light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_216.jpg": {
+    "attributes": {
+      "habitat": "forest"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/8010medium.jpg": {
+    "attributes": {
+      "cap_color": "white",
+      "habitat": "forest"
+    },
+    "lighting": "in low light"
+  },
+  "Crucibulum laeve/7916medium.jpg": {
+    "attributes": {
+      "cap_color": "yellow",
+      "habitat": "forest"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/8094medium.jpeg": {
+    "attributes": {
+      "cap_color": "white",
+      "habitat": "forest"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/8017medium.jpeg": {
+    "attributes": {
+      "cap_color": "white",
+      "habitat": "dead wood"
+    },
+    "lighting": "in low light"
+  },
+  "Crucibulum laeve/8072medium.jpeg": {
+    "attributes": {
+      "habitat": "forest"
+    },
+    "lighting": "in bright daylight"
+  },
+  "Crucibulum laeve/8170medium.jpg": {
+    "attributes": {
+      "cap_color": "brown",
+      "habitat": "forest"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/8065medium.jpg": {
+    "attributes": {
+      "habitat": "forest"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_223.jpg": {
+    "attributes": {
+      "habitat": "forest"
+    },
+    "lighting": "in low light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_72.jpg": {
+    "attributes": {
+      "cap_color": "white",
+      "habitat": "soil"
+    },
+    "lighting": "in low light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_134.jpg": {
+    "attributes": {
+      "cap_color": "yellow",
+      "habitat": "dead wood"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/8079medium.jpeg": {
+    "attributes": {
+      "habitat": "forest"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_199.jpg": {
+    "attributes": {
+      "cap_color": "brown",
+      "habitat": "forest"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/8105medium.jpg": {
+    "attributes": {
+      "cap_color": "brown",
+      "habitat": "forest"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/Crucibulum laeve_148.jpg": {
+    "attributes": {
+      "cap_color": "white",
+      "habitat": "dead wood"
+    },
+    "lighting": "in moderate light"
+  },
+  "Crucibulum laeve/8201medium.jpeg": {
+    "attributes": {
+      "habitat": "leaf litter"
+    },
+    "lighting": "in moderate light"
+  }
+}

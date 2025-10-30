@@ -232,3 +232,33 @@ external/ecovision_mushroom/logs/**
 # macOS cruft
 .DS_Store
 
+
+# allow BLIP preview artifacts
+!results/examples/
+!results/examples/**
+
+# keep only preview examples from results
+results/**
+!results/examples/
+!results/examples/**
+
+# track generated prompt JSONs
+!data/prompts/
+!data/prompts/**
+
+!results/metrics/
+!results/metrics/**
+
+!results/metrics/
+!results/metrics/**
+
+!data/prompts/**
+!results/metrics/**
+!results/figs/**
+
+# keep selected prompt/attribute JSONs tracked
+!data/prompts/blip_captions.json
+!data/prompts/blip_attributes.json
+!data/prompts/class_prompts_plain.json
+!data/prompts/class_prompts_attr.json
+!data/prompts/class_prompts_enriched.json
