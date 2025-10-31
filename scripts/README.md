@@ -135,3 +135,29 @@ python scripts/eval_zero_shot.py \
   --backbone  "ViT-B-32-quickgelu" \
   --splits    val test
 ```
+
+### BLIP→Prompt→CLIP quickstart
+
+```console
+# captions
+python scripts/blip_caption_bank.py --root data/raw --out data/prompts/blip_captions.json --limit 50
+# attributes
+python scripts/extract_attributes.py --captions data/prompts/blip_captions.json --out data/prompts/blip_attributes.json
+# class prompts
+python scripts/build_text_prompts.py --csv splits/train.csv --attributes data/prompts/blip_attributes.json \
+  --out_plain data/prompts/class_prompts_plain.json \
+  --out_attr  data/prompts/class_prompts_attr.json \
+  --out_enriched data/prompts/class_prompts_enriched.json
+# CLIP zero-shot
+python scripts/eval_zero_shot.py --data-root data/raw --train-csv splits/train.csv --val-csv splits/val.csv --test-csv splits/test.csv \
+  --labels labels.tsv --backbone "ViT-B-32-quickgelu" --pretrained openai --splits val test \
+  --results-dir results --prompts_plain data/prompts/class_prompts_plain.json \
+  --prompts_attr data/prompts/class_prompts_attr.json --prompts_enriched data/prompts/class_prompts_enriched.json \
+  --out_plain_json results/metrics/clip_plain.json --out_attr_json results/metrics/clip_attr.json --out_enriched_json results/metrics/clip_enriched.json
+# Qualitative
+python scripts/make_qualitative.py --data-root data/raw --features_dir features --backbone "ViT-B-32-quickgelu" --pretrained openai \
+  --split val --labels labels.tsv --prompts_plain data/prompts/class_prompts_plain.json \
+  --prompts_enriched data/prompts/class_prompts_enriched.json --n_examples 12 \
+  --out results/examples/qualitative.png
+
+```

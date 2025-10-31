@@ -1,0 +1,12 @@
+{
+  "model": "ViT-B-32-quickgelu/openai",
+  "type": "enriched",
+  "splits": {
+    "test": {
+      "top1": 0.20270270270270271,
+      "top5": 0.37850646855386194,
+      "balanced_acc": 0.11357026676331844,
+      "macro_f1": 0.08311599414163144
+    }
+  }
+}

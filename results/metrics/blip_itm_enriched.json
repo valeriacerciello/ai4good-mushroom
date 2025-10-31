@@ -1,0 +1,17 @@
+{
+  "model": "Salesforce/blip-itm-base-coco",
+  "type": "blip_itm",
+  "aggregator": "mean",
+  "shortlist": {
+    "engine": "clip",
+    "topk": 20
+  },
+  "splits": {
+    "val": {
+      "top1": 0.019082991803278687,
+      "top5": 0.06346055327868852,
+      "balanced_acc": 0.018156287218870037,
+      "macro_f1": 0.009897393480828196
+    }
+  }
+}
