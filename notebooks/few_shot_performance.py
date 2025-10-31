@@ -100,7 +100,7 @@ class Args:
     labels = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/data_prompts_label/labels.tsv"
     backbones = list(pretrained_dict.keys())
     pretrained = pretrained_dict
-    shots = [0, 1, 5, 10, 20, 50]
+    shots = [0, 1, 5] #, 10, 20, 50]
     splits = ["val", "test"]
     save_dir = "features"
     results_dir = "results"
