@@ -86,8 +86,8 @@ def zero_shot_scores(label_names, backbone, pretrained, device, prompts_path=Non
 
 pretrained_dict = {
 					"ViT-H-14-378-quickgelu": "dfn5b",
-					# "ViT-gopt-16-SigLIP2-384": "webli",
-					# "PE-Core-bigG-14-448": "meta",
+					"ViT-gopt-16-SigLIP2-384": "webli",
+					"PE-Core-bigG-14-448": "meta",
 					"ViT-B-32-quickgelu": "openai",
 					"ViT-L-14": "openai",
 					"ViT-B-16": "openai",
@@ -100,7 +100,7 @@ class Args:
     labels = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/data_prompts_label/labels.tsv"
     backbones = list(pretrained_dict.keys())
     pretrained = pretrained_dict
-    shots = [0, 1, 5, 10, 20]
+    shots = [0, 1, 5, 10, 20, 50]
     splits = ["val", "test"]
     save_dir = "features"
     results_dir = "results"
