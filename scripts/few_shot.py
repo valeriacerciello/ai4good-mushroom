@@ -11,6 +11,7 @@ import argparse
 import os
 from pathlib import Path
 import numpy as np
+import zipfile
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
@@ -31,8 +32,15 @@ def load_labels(labels_tsv):
 
 def ensure_features(split, backbone, data_root, csv_path, labels_tsv, save_dir="features", pretrained="openai", device=None):
     npz = Path(save_dir)/backbone/f"{split}.npz"
+
     if npz.exists():
-        z=np.load(npz, allow_pickle=True); return z["X"], z["y"], z["paths"]
+        try:
+            z = np.load(npz, allow_pickle=True)
+            return z["X"], z["y"], z["paths"]
+        except (zipfile.BadZipFile, KeyError):
+            print(f"Warning: {npz} exists but is corrupted or invalid. Regenerating...")
+            npz.unlink()  # delete corrupted file
+
     # lazy compute via dump_features (copied behaviour from other scripts)
     cmd = f'python scripts/dump_features.py --data-root "{data_root}" --csv "{csv_path}" --labels "{labels_tsv}" --backbone "{backbone}" --pretrained "{pretrained}" --save-dir "{save_dir}"'
     ec = os.system(cmd)

@@ -85,6 +85,7 @@ def get_text_embeddings(labels: List[str], prompt_set: str = "v1",
     results: Dict[str, Any] = {}
 
     for label in labels:
+        print(f"Encoding prompts for label: {label}")
         prompts: List[str] = []
 
         # If we loaded a common_prompts bundle, prefer that (it contains image-based + common names)

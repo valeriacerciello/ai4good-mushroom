@@ -24,20 +24,54 @@ NUM_SAMPLES = 200
 TEMP = 0.12
 TRAIN_CSV = "/zfs/ai4good/datasets/mushroom/train.csv"
 
+# def encode_images(model, preprocess, image_paths, device):
+#     images = []
+#     for p in image_paths:
+#         print(f"Encoding image: {p}")
+#         # local = p.replace('/kaggle/working/', '/zfs/ai4good/datasets/mushroom/')
+#         local = '/zfs/ai4good/datasets/mushroom/merged_dataset/' + p
+#         if os.path.exists(local):
+#             from PIL import Image
+#             im = Image.open(local).convert('RGB')
+#             img_t = preprocess(im).unsqueeze(0).to(device)
+#             images.append(img_t)
+#         else:
+#             images.append(None)
+#     embeddings = []
+#     for img in images:
+#         print(f"Processing image tensor: {img}")
+#         if img is None:
+#             embeddings.append(None)
+#             continue
+#         with torch.no_grad():
+#             emb = model.encode_image(img)
+#             emb = F.normalize(emb, dim=-1)
+#             embeddings.append(emb.cpu().squeeze(0))
+#     return embeddings
+
+from concurrent.futures import ThreadPoolExecutor
+from PIL import Image
+import os
+import torch
+import torch.nn.functional as F
+
 def encode_images(model, preprocess, image_paths, device):
-    images = []
-    for p in image_paths:
-        # local = p.replace('/kaggle/working/', '/zfs/ai4good/datasets/mushroom/')
+    def load_and_preprocess(p):
+        print(f"Encoding image: {p}")
         local = '/zfs/ai4good/datasets/mushroom/merged_dataset/' + p
         if os.path.exists(local):
-            from PIL import Image
             im = Image.open(local).convert('RGB')
             img_t = preprocess(im).unsqueeze(0).to(device)
-            images.append(img_t)
-        else:
-            images.append(None)
+            return img_t
+        return None
+
+    # --- Parallel image loading/preprocessing ---
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        images = list(executor.map(load_and_preprocess, image_paths))
+
     embeddings = []
     for img in images:
+        print(f"Processing image tensor: {img}")
         if img is None:
             embeddings.append(None)
             continue
@@ -46,6 +80,7 @@ def encode_images(model, preprocess, image_paths, device):
             emb = F.normalize(emb, dim=-1)
             embeddings.append(emb.cpu().squeeze(0))
     return embeddings
+
 
 
 def predict_from_emb(image_emb, label_emb_dict):
@@ -128,21 +163,25 @@ def evaluate_prompts_and_few_shot(labels, train_csv, split_csv, shots=(1,5,10,20
     """
     device = device
     # model, preprocess = clip.load(model_name, device)
+    print(f"Loading model {model_name} with pretrained={pretrained} on device {device}")
     model, _, preprocess = open_clip.create_model_and_transforms(model_name, pretrained=pretrained, device=device)
 
 
     # load small split_csv subset
+    print(f"Loading data split from {split_csv}")
     df = pd.read_csv(split_csv)
     df = df.sample(frac=1, random_state=random_state).reset_index(drop=True)
     df = df.head(num_samples) # TODO: maybe remove?
     image_paths = df['filepath'].tolist()
     true_labels = df['label'].tolist()
 
+    print(f"Encoding {len(image_paths)} images...")
     image_embeddings = encode_images(model, preprocess, image_paths, device)
 
     labels = list(labels)
 
     # delta prompts
+    print(f"Loading delta prompts from {delta_prompts_path or DELTA_PROMPTS} and encoding...")
     path_delta = delta_prompts_path or DELTA_PROMPTS
     delta_embs = get_text_embeddings(labels, prompt_set='ensemble', model_name=model_name, device=device, include_common_names=True, common_prompts_path=path_delta, pretrained=pretrained)
     delta_mean = {lbl: delta_embs[lbl]['label_embedding'] for lbl in labels}
@@ -166,6 +205,7 @@ def evaluate_prompts_and_few_shot(labels, train_csv, split_csv, shots=(1,5,10,20
         preds_m = [p for p,m in zip(preds, mask) if m]
         return sum(1 for p,t in zip(preds_m, trues_m) if p==t)/len(trues_m)
 
+    print("Scoring delta prompt methods...")
     preds_delta_mean = score_all(delta_mean, None, use_pooling=False)
     preds_delta_pool = score_all(None, delta_embs, use_pooling=True, temp=temp)
     acc_delta_mean = acc_from_preds(preds_delta_mean, true_labels)
@@ -173,6 +213,7 @@ def evaluate_prompts_and_few_shot(labels, train_csv, split_csv, shots=(1,5,10,20
 
     few_shot_results = {}
     for k in shots:
+        print(f"Building and scoring few-shot prototypes with k={k}...")
         proto_dict = build_few_shot_prototypes(labels, train_csv, k, model, preprocess, device, random_state=random_state)
         preds_proto = score_all(proto_dict, None, use_pooling=False)
         acc_proto = acc_from_preds(preds_proto, true_labels)

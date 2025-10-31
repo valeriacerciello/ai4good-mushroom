@@ -84,12 +84,13 @@ def zero_shot_scores(label_names, backbone, pretrained, device, prompts_path=Non
 
 	return mean_embeddings
 
-pretrained_dict = {"ViT-B-32-quickgelu": "openai",
+pretrained_dict = {
+					"ViT-H-14-378-quickgelu": "dfn5b",
+					# "ViT-gopt-16-SigLIP2-384": "webli",
+					# "PE-Core-bigG-14-448": "meta",
+					"ViT-B-32-quickgelu": "openai",
 					"ViT-L-14": "openai",
 					"ViT-B-16": "openai",
-					"ViT-H-14-378-quickgelu": "dfn5b",
-					"ViT-gopt-16-SigLIP2-384": "webli",
-					"PE-Core-bigG-14-448": "meta"
 					}
 class Args:
     data_root = "/home/c/dkorot/AI4GOOD/provided_dir/datasets/mushroom/merged_dataset"
@@ -99,7 +100,7 @@ class Args:
     labels = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/data_prompts_label/labels.tsv"
     backbones = list(pretrained_dict.keys())
     pretrained = pretrained_dict
-    shots = [1]
+    shots = [0, 1, 5, 10, 20]
     splits = ["val", "test"]
     save_dir = "features"
     results_dir = "results"
@@ -193,6 +194,7 @@ def evaluate_backbone(backbone, args, label_names, K):
 			prompt_results = evaluate_prompts_and_few_shot(label_names, args.train_csv, data_split, shots=args.shots, model_name=backbone, device=args.device, num_samples=200, delta_prompts_path=args.prompts_path, random_state=args.seed, pretrained=args.pretrained[backbone])
 			# Append prompt-based prototype rows to backbone_records. Use best-effort placeholders for top5/balanced/macro.
 			for k, acc in sorted(prompt_results.get('few_shot_results', {}).items()):
+				print(f"Prompt-based few-shot prototype accuracy for shot={k}: {acc:.4f}")
 				backbone_records.append((int(k), 'prompt-prototype', split_name, backbone, float(acc), float(acc), float(acc), float(acc)))
 			# Also add delta prompt zero-shot entries
 			backbone_records.append((0, 'delta-net-new-mean', split_name, backbone, float(prompt_results.get('delta_net_new_mean', 0.0)), float(prompt_results.get('delta_net_new_mean', 0.0)), float(prompt_results.get('delta_net_new_mean', 0.0)), float(prompt_results.get('delta_net_new_mean', 0.0))))
