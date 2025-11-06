@@ -1,0 +1,15 @@
+[2025-10-22 12:50:38,665][src.utils.utils][INFO] - [rank: 0] Enforcing tags! <cfg.extras.enforce_tags=True>
+[2025-10-22 12:50:38,673][src.utils.utils][INFO] - [rank: 0] Printing config tree with Rich! <cfg.extras.print_config=True>
+[2025-10-22 12:50:38,935][__main__][INFO] - [rank: 0] Instantiating datamodule <src.data.datamodule.MushroomDataModule>
+[2025-10-22 12:50:39,223][__main__][INFO] - [rank: 0] Instantiating model <src.models.module.ClassificationLitModule>
+[2025-10-22 12:50:39,497][__main__][INFO] - [rank: 0] Instantiating callbacks...
+[2025-10-22 12:50:39,498][src.utils.instantiators][INFO] - [rank: 0] Instantiating callback <lightning.pytorch.callbacks.ModelCheckpoint>
+[2025-10-22 12:50:39,508][src.utils.instantiators][INFO] - [rank: 0] Instantiating callback <lightning.pytorch.callbacks.EarlyStopping>
+[2025-10-22 12:50:39,510][src.utils.instantiators][INFO] - [rank: 0] Instantiating callback <lightning.pytorch.callbacks.RichModelSummary>
+[2025-10-22 12:50:39,511][src.utils.instantiators][INFO] - [rank: 0] Instantiating callback <lightning.pytorch.callbacks.TQDMProgressBar>
+[2025-10-22 12:50:39,511][src.utils.instantiators][INFO] - [rank: 0] Instantiating callback <lightning.pytorch.callbacks.LearningRateMonitor>
+[2025-10-22 12:50:39,512][__main__][INFO] - [rank: 0] Instantiating loggers...
+[2025-10-22 12:50:39,513][src.utils.instantiators][INFO] - [rank: 0] Instantiating logger <lightning.pytorch.loggers.csv_logs.CSVLogger>
+[2025-10-22 12:50:39,515][__main__][INFO] - [rank: 0] Instantiating trainer <lightning.pytorch.trainer.Trainer>
+[2025-10-22 12:50:39,534][__main__][INFO] - [rank: 0] Logging hyperparameters!
+[2025-10-22 12:50:39,568][__main__][INFO] - [rank: 0] Starting training!

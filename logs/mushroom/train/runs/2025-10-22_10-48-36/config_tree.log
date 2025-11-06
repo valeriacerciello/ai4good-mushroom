@@ -1,0 +1,191 @@
+CONFIG
+├── data
+│   └── _target_: src.data.datamodule.MushroomDataModule                                             
+│       data_dir: /zfs/ai4good/datasets/mushroom                                                     
+│       num_classes: 169                                                                             
+│       batch_size: 128                                                                              
+│       num_workers: 16                                                                              
+│       pin_memory: true                                                                             
+│       image_size: 384                                                                              
+│       rgb_mean:                                                                                    
+│       - 0.4308                                                                                     
+│       - 0.4084                                                                                     
+│       - 0.3393                                                                                     
+│       rgb_std:                                                                                     
+│       - 0.1063                                                                                     
+│       - 0.1023                                                                                     
+│       - 0.1123                                                                                     
+│       mini: 408                                                                                    
+│       train_transform:                                                                             
+│       - transform: RandomResizedCrop                                                               
+│         params:                                                                                    
+│           size: 384                                                                                
+│           scale:                                                                                   
+│           - 0.08                                                                                   
+│           - 1.0                                                                                    
+│           ratio:                                                                                   
+│           - 0.7                                                                                    
+│           - 1.33                                                                                   
+│       - transform: RandomHorizontalFlip                                                            
+│       - transform: ColorJitter                                                                     
+│         params:                                                                                    
+│           brightness: 0.4                                                                          
+│           contrast: 0.4                                                                            
+│           saturation: 0.4                                                                          
+│           hue: 0.1                                                                                 
+│       - transform: ToTensor                                                                        
+│       - transform: Normalize                                                                       
+│         params:                                                                                    
+│           mean:                                                                                    
+│           - 0.4308                                                                                 
+│           - 0.4084                                                                                 
+│           - 0.3393                                                                                 
+│           std:                                                                                     
+│           - 0.1063                                                                                 
+│           - 0.1023                                                                                 
+│           - 0.1123                                                                                 
+│       val_transform:                                                                               
+│       - transform: Resize                                                                          
+│         params:                                                                                    
+│           size: 440                                                                                
+│       - transform: CenterCrop                                                                      
+│         params:                                                                                    
+│           size: 384                                                                                
+│       - transform: ToTensor                                                                        
+│       - transform: Normalize                                                                       
+│         params:                                                                                    
+│           mean:                                                                                    
+│           - 0.4308                                                                                 
+│           - 0.4084                                                                                 
+│           - 0.3393                                                                                 
+│           std:                                                                                     
+│           - 0.1063                                                                                 
+│           - 0.1023                                                                                 
+│           - 0.1123                                                                                 
+│       test_transform:                                                                              
+│       - transform: Resize                                                                          
+│         params:                                                                                    
+│           size: 440                                                                                
+│       - transform: CenterCrop                                                                      
+│         params:                                                                                    
+│           size: 384                                                                                
+│       - transform: ToTensor                                                                        
+│       - transform: Normalize                                                                       
+│         params:                                                                                    
+│           mean:                                                                                    
+│           - 0.4308                                                                                 
+│           - 0.4084                                                                                 
+│           - 0.3393                                                                                 
+│           std:                                                                                     
+│           - 0.1063                                                                                 
+│           - 0.1023                                                                                 
+│           - 0.1123                                                                                 
+│                                                                                                    
+├── model
+│   └── _target_: src.models.module.ClassificationLitModule                                          
+│       num_classes: 169                                                                             
+│       optimizer:                                                                                   
+│         _target_: torch.optim.AdamW                                                                
+│         _partial_: true                                                                            
+│         lr: 0.001                                                                                  
+│         weight_decay: 0.0001                                                                       
+│       scheduler:                                                                                   
+│         _target_: torch.optim.lr_scheduler.CosineAnnealingLR                                       
+│         _partial_: true                                                                            
+│         T_max: 3                                                                                   
+│         eta_min: 1.0e-06                                                                           
+│       net:                                                                                         
+│         _target_: torchvision.models.resnet18                                                      
+│         num_classes: 169                                                                           
+│       compile: true                                                                                
+│                                                                                                    
+├── callbacks
+│   └── model_checkpoint:                                                                            
+│         _target_: lightning.pytorch.callbacks.ModelCheckpoint                                      
+│         dirpath: /zfs/ai4good/student/hgupta/logs/mushroom/train/runs/2025-10-22_10-48-36/checkpoin
+│         filename: epoch_{epoch:03d}                                                                
+│         monitor: val/macro_iou                                                                     
+│         verbose: false                                                                             
+│         save_last: true                                                                            
+│         save_top_k: 1                                                                              
+│         mode: max                                                                                  
+│         auto_insert_metric_name: false                                                             
+│         save_weights_only: false                                                                   
+│         every_n_train_steps: null                                                                  
+│         train_time_interval: null                                                                  
+│         every_n_epochs: null                                                                       
+│         save_on_train_epoch_end: null                                                              
+│       early_stopping:                                                                              
+│         _target_: lightning.pytorch.callbacks.EarlyStopping                                        
+│         monitor: val/macro_iou                                                                     
+│         min_delta: 0.0                                                                             
+│         patience: 100                                                                              
+│         verbose: false                                                                             
+│         mode: max                                                                                  
+│         strict: true                                                                               
+│         check_finite: true                                                                         
+│         stopping_threshold: null                                                                   
+│         divergence_threshold: null                                                                 
+│         check_on_train_epoch_end: null                                                             
+│       model_summary:                                                                               
+│         _target_: lightning.pytorch.callbacks.RichModelSummary                                     
+│         max_depth: -1                                                                              
+│       tqdm_progress_bar:                                                                           
+│         _target_: lightning.pytorch.callbacks.TQDMProgressBar                                      
+│       lr_monitor:                                                                                  
+│         _target_: lightning.pytorch.callbacks.LearningRateMonitor                                  
+│         logging_interval: epoch                                                                    
+│         log_momentum: true                                                                         
+│                                                                                                    
+├── logger
+│   └── csv:                                                                                         
+│         _target_: lightning.pytorch.loggers.csv_logs.CSVLogger                                     
+│         save_dir: /zfs/ai4good/student/hgupta/logs/mushroom/train/runs/2025-10-22_10-48-36         
+│         name: csv/                                                                                 
+│         prefix: ''                                                                                 
+│       wandb:                                                                                       
+│         project: mushroom                                                                          
+│         tags:                                                                                      
+│         - mushroom                                                                                 
+│         - resnet50                                                                                 
+│         - mini                                                                                     
+│         name: ResNet50 mini                                                                        
+│                                                                                                    
+├── trainer
+│   └── _target_: lightning.pytorch.trainer.Trainer                                                  
+│       default_root_dir: /zfs/ai4good/student/hgupta/logs/mushroom/train/runs/2025-10-22_10-48-36   
+│       min_epochs: 1                                                                                
+│       max_epochs: 3                                                                                
+│       accelerator: cpu                                                                             
+│       devices: 1                                                                                   
+│       precision: 32                                                                                
+│       check_val_every_n_epoch: 1                                                                   
+│       deterministic: false                                                                         
+│       enable_progress_bar: true                                                                    
+│                                                                                                    
+├── paths
+│   └── root_dir: /zfs/ai4good/student/hgupta/ai4good-mushroom/external/ecovision_mushroom           
+│       data_dir: /zfs/ai4good/datasets/mushroom                                                     
+│       log_dir: /zfs/ai4good/student/hgupta/logs/mushroom                                           
+│       output_dir: /zfs/ai4good/student/hgupta/logs/mushroom/train/runs/2025-10-22_10-48-36         
+│       work_dir: /zfs/ai4good/student/hgupta                                                        
+│                                                                                                    
+├── extras
+│   └── ignore_warnings: false                                                                       
+│       enforce_tags: true                                                                           
+│       print_config: true                                                                           
+│                                                                                                    
+├── task_name
+│   └── train                                                                                        
+├── tags
+│   └── ['mushroom', 'resnet50', 'mini']                                                             
+├── train
+│   └── True                                                                                         
+├── test
+│   └── True                                                                                         
+├── ckpt_path
+│   └── None                                                                                         
+├── seed
+│   └── 12345                                                                                        
+└── optimized_metric
+    └── val/macro_iou                                                                                

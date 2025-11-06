@@ -1,0 +1,7 @@
+{
+  "n_samples": 200,
+  "delta_net_new_mean_top1": 0.26,
+  "delta_net_new_pool_top1": 0.265,
+  "delta_net_new_mean_top5": 0.535,
+  "delta_net_new_pool_top5": 0.535
+}

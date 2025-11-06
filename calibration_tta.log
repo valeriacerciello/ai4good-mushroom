@@ -1,0 +1,147 @@
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:99: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_pred = type_of_target(y_pred, input_name="y_pred")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+Computing CLIP probs (val/test)
+Computing ResNet probs (val/test)
+Fitting temperature for CLIP on val...
+Fitting temperature for ResNet on val...
+Saved calibration+TTA results to /zfs/ai4good/student/hgupta/calibration_tta_results.json

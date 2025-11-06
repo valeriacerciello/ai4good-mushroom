@@ -1,0 +1,72 @@
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:98: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_true = type_of_target(y_true, input_name="y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:98: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_true = type_of_target(y_true, input_name="y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:98: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  type_true = type_of_target(y_true, input_name="y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/utils/multiclass.py:79: UserWarning: The number of unique classes is greater than 50% of the number of samples. `y` could represent a regression problem, not a classification problem.
+  ys_types = set(type_of_target(x) for x in ys)
+Loaded val=200, test=200, classes=169
+Computing CLIP probabilities (val)...
+Computing CLIP probabilities (test)...
+Computing ResNet probabilities (val/test)...
+
+=== Fusion Summary ===
+Best alpha (val): 0.0
+Test metrics: top1=0.250, top5=0.480, bal_acc=0.152, macro_f1=0.096
+Saved fusion_alpha_sweep.png
+Creating comprehensive fusion visualization graphs...
+Loading results from: fusion_results.json
+
+Generating graphs:
+✓ Saved: fusion_alpha_sweep_detailed.png
+✓ Saved: fusion_model_comparison.png
+✓ Saved: fusion_heatmap.png
+✓ Saved: fusion_improvement.png
+✓ Saved: fusion_complete_overview.png
+
+============================================================
+✓ All graphs created successfully!
+============================================================
+
+Generated files:
+  1. fusion_alpha_sweep_detailed.png - Detailed alpha sweep (4 panels)
+  2. fusion_model_comparison.png - Bar chart comparison
+  3. fusion_heatmap.png - Performance heatmap
+  4. fusion_improvement.png - Improvement over individual models
+  5. fusion_complete_overview.png - Comprehensive single-page summary
+'fusion_alpha_sweep.png' -> 'plots/fusion_alpha_sweep.png'
+'fusion_alpha_sweep_detailed.png' -> 'plots/fusion_alpha_sweep_detailed.png'
+'fusion_alpha_sweep_restricted.png' -> 'plots/fusion_alpha_sweep_restricted.png'
+'fusion_complete_overview.png' -> 'plots/fusion_complete_overview.png'
+'fusion_heatmap.png' -> 'plots/fusion_heatmap.png'
+'fusion_improvement.png' -> 'plots/fusion_improvement.png'
+'fusion_model_comparison.png' -> 'plots/fusion_model_comparison.png'

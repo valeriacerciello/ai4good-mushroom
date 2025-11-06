@@ -1,0 +1,194 @@
+================================================================================
+ACCURACY IMPROVEMENT PLAN - EXECUTION SUMMARY
+================================================================================
+Date: October 22, 2025
+Goal: Increase mushroom classification accuracy from 25% to 35-45% top-1
+
+================================================================================
+CURRENT STATUS
+================================================================================
+
+Baseline Performance:
+  - CLIP ViT-B/32 (delta prompts): 25.0% top-1, 48.0% top-5
+  - ResNet18 (1 epoch):            ~1.3% top-1 (weak)
+  - Fusion:                        25.0% top-1 (defaults to CLIP-only)
+
+================================================================================
+IMPROVEMENTS IN PROGRESS
+================================================================================
+
+✓ 1. TRAINING PROPER RESNET (20 EPOCHS)
+   Status: IN PROGRESS in tmux session 'resnet_training'
+   Command: ResNet18, 20 epochs, baseline experiment
+   Expected: 45-55% top-1 accuracy (standalone)
+   Expected: +20-25% improvement over 1-epoch version
+   Time: 8-12 hours
+   Monitor: tail -f /zfs/ai4good/student/hgupta/resnet18_20epochs.log
+   Attach: tmux attach-session -t resnet_training
+
+✓ 2. EVALUATING LARGER CLIP MODELS
+   Status: IN PROGRESS in tmux session 'clip_eval'
+   Models: ViT-B/32, ViT-B/16, ViT-L/14
+   Prompts: ALL 19,141 prompts (enhanced_with_common_names_prompts_clean.json)
+   Temperature: 0.05 (optimal)
+   Expected improvements:
+     - ViT-B/16: +3-5% over ViT-B/32 → 28-30% top-1
+     - ViT-L/14: +8-12% over ViT-B/32 → 33-37% top-1
+   Time: 2-4 hours
+   Monitor: tail -f /zfs/ai4good/student/hgupta/clip_all_models_evaluation.log
+   Attach: tmux attach-session -t clip_eval
+
+✓ 3. USING ALL PROMPTS (19K INSTEAD OF 10K)
+   Status: IN PROGRESS (included in #2)
+   Previous: 10,389 delta prompts
+   Now: 19,141 total prompts (baseline + enhanced)
+   Expected: +2-5% improvement
+   
+✓ 4. CLIP ENSEMBLE
+   Status: IN PROGRESS (included in #2)
+   Strategy: Majority voting across ViT-B/32, ViT-B/16, ViT-L/14
+   Expected: +3-6% over best single model
+   Final expected: 36-43% top-1 accuracy
+
+================================================================================
+NEXT STEPS (AUTOMATED)
+================================================================================
+
+After current tasks complete, the following will run:
+
+⏳ 5. FINAL FUSION
+   Script: final_fusion.py
+   Components:
+     - CLIP Ensemble (ViT-B/32 + ViT-B/16 + ViT-L/14)
+     - ResNet18 (20 epochs)
+     - Score-level fusion with alpha tuning
+   Expected: 35-45% top-1 accuracy
+   
+   To run manually after tasks complete:
+   $ cd /zfs/ai4good/student/hgupta
+   $ mushroom_env/bin/python3 final_fusion.py
+
+⏳ 6. REGENERATE VISUALIZATIONS
+   Script: create_fusion_graphs.py
+   Outputs: Updated graphs with new fusion results
+
+================================================================================
+MONITORING
+================================================================================
+
+Quick Status Check:
+$ /zfs/ai4good/student/hgupta/monitor_training.sh
+
+View Logs:
+$ tail -f /zfs/ai4good/student/hgupta/resnet18_20epochs.log
+$ tail -f /zfs/ai4good/student/hgupta/clip_all_models_evaluation.log
+
+Attach to Sessions:
+$ tmux attach-session -t resnet_training   # View ResNet training live
+$ tmux attach-session -t clip_eval         # View CLIP evaluation live
+$ tmux ls                                  # List all sessions
+
+Detach from Session:
+Press: Ctrl+B, then D
+
+================================================================================
+EXPECTED TIMELINE
+================================================================================
+
+Hour 0-2:   ✓ CLIP evaluation completes
+            → Results: clip_ViT-B-32_all_prompts.json
+            → Results: clip_ViT-B-16_all_prompts.json
+            → Results: clip_ViT-L-14_all_prompts.json
+            → Results: clip_ensemble_results.json
+
+Hour 8-12:  ✓ ResNet training completes
+            → Checkpoint: logs/mushroom/train/runs/LATEST/checkpoints/
+
+Hour 12-14: → Run final_fusion.py
+            → Results: final_fusion_results.json
+            → Graphs: fusion_*.png
+
+EXPECTED FINAL RESULTS:
+  - CLIP ViT-L/14:        33-37% top-1
+  - ResNet18 (20 epochs): 45-55% top-1
+  - CLIP Ensemble:        36-43% top-1
+  - Final Fusion:         35-45% top-1 ⭐
+
+================================================================================
+COMPLETED FILES
+================================================================================
+
+Scripts Created:
+  ✓ eval_all_clip_models.py      - Evaluate 3 CLIP models + ensemble
+  ✓ final_fusion.py               - Final fusion after all training
+  ✓ monitor_training.sh           - Real-time status monitor
+  ✓ quick_improvements.sh         - Automated improvement script
+
+Documentation:
+  ✓ ACCURACY_IMPROVEMENT_STRATEGIES.md  - 20 improvement strategies
+  ✓ PROJECT_WORK_SUMMARY.txt            - Complete work log
+  ✓ FUSION_RESULTS_SUMMARY.md           - Fusion analysis
+  ✓ EXECUTION_STATUS.txt                - This file
+
+================================================================================
+RESULTS LOCATIONS
+================================================================================
+
+When complete, check these files:
+
+CLIP Results:
+  - clip_ViT-B-32_all_prompts.json
+  - clip_ViT-B-16_all_prompts.json  
+  - clip_ViT-L-14_all_prompts.json
+  - clip_ensemble_results.json
+
+ResNet Results:
+  - logs/mushroom/train/runs/LATEST/checkpoints/epoch_*.ckpt
+  - resnet18_20epochs.log
+
+Fusion Results:
+  - final_fusion_results.json
+  - fusion_*.png (graphs)
+
+================================================================================
+IMPROVEMENT BREAKDOWN
+================================================================================
+
+Strategy                          Expected Gain    Status
+--------------------------------------------------------------------------------
+Use larger CLIP (ViT-L/14)       +8-12%           IN PROGRESS
+Train proper ResNet (20 epochs)  +20-25% (ResNet) IN PROGRESS
+Use all prompts (19k)            +2-5%            IN PROGRESS
+CLIP ensemble                    +3-6%            IN PROGRESS
+Final fusion                     +5-10%           WAITING
+--------------------------------------------------------------------------------
+TOTAL EXPECTED:                  ~35-45% top-1    ~10-20% improvement
+
+================================================================================
+FUTURE IMPROVEMENTS (NOT YET STARTED)
+================================================================================
+
+See ACCURACY_IMPROVEMENT_STRATEGIES.md for:
+  - Fine-tune CLIP on mushroom data (+15-25%)
+  - Feature-level fusion (+3-8%)
+  - Use ViT instead of ResNet (+5-15%)
+  - Contrastive learning (+8-15%)
+  - And 15 more strategies...
+
+To reach 70-80% accuracy, implement:
+  1. Fine-tuning CLIP (BIGGEST IMPACT)
+  2. Better architectures (ViT, DINOv2)
+  3. Advanced ensembles
+
+================================================================================
+SUPPORT
+================================================================================
+
+Questions? Issues?
+  - Check monitor_training.sh for current status
+  - View logs for detailed progress
+  - All scripts have detailed comments
+
+Good luck with your mushroom classification! 🍄
+
+================================================================================

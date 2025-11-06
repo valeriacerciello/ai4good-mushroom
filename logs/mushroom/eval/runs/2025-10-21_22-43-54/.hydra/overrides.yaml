@@ -1,0 +1,6 @@
+- logger=csv
+- trainer.accelerator=cpu
+- trainer.precision=32
+- paths.data_dir=/zfs/ai4good/datasets/mushroom
+- paths.log_dir=/zfs/ai4good/student/hgupta/logs/mushroom
+- ckpt_path=/zfs/ai4good/datasets/mushroom/baselines/resnet50.ckpt

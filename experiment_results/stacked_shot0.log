@@ -1,0 +1,35 @@
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/linear_model/_logistic.py:1272: FutureWarning: 'multi_class' was deprecated in version 1.5 and will be removed in 1.8. From then on, it will always use 'multinomial'. Leave it to its default value to avoid this warning.
+  warnings.warn(
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/sklearn/metrics/_classification.py:2801: UserWarning: y_pred contains classes not in y_true
+  warnings.warn("y_pred contains classes not in y_true")
+Loaded train=5000, val=200, test=15614, classes=169
+Computing CLIP probs (prompt pooling)
+Computing ResNet probs (train/val/test)
+Training logistic regression stacker (multinomial) on train predictions...
+Predicting on test...
+Computing alpha sweep baseline (val)
+
+=== Results Summary ===
+Stacked (LR) Test: top1=0.855, top5=0.937, bal_acc=0.807, macro_f1=0.814
+Best-alpha (val->test) alpha=1.0 Test: top1=0.855, top5=0.967
+Saved results to /zfs/ai4good/student/hgupta/experiment_results/stacked_fusion_shots0.json

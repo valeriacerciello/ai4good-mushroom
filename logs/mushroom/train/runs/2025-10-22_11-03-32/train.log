@@ -1,0 +1,19 @@
+[2025-10-22 11:03:32,757][src.utils.utils][INFO] - [rank: 0] Enforcing tags! <cfg.extras.enforce_tags=True>
+[2025-10-22 11:03:32,760][src.utils.utils][INFO] - [rank: 0] Printing config tree with Rich! <cfg.extras.print_config=True>
+[2025-10-22 11:03:32,927][__main__][INFO] - [rank: 0] Instantiating datamodule <src.data.datamodule.MushroomDataModule>
+[2025-10-22 11:03:33,106][__main__][INFO] - [rank: 0] Instantiating model <src.models.module.ClassificationLitModule>
+[2025-10-22 11:03:33,238][__main__][INFO] - [rank: 0] Instantiating callbacks...
+[2025-10-22 11:03:33,239][src.utils.instantiators][INFO] - [rank: 0] Instantiating callback <lightning.pytorch.callbacks.ModelCheckpoint>
+[2025-10-22 11:03:33,243][src.utils.instantiators][INFO] - [rank: 0] Instantiating callback <lightning.pytorch.callbacks.EarlyStopping>
+[2025-10-22 11:03:33,244][src.utils.instantiators][INFO] - [rank: 0] Instantiating callback <lightning.pytorch.callbacks.RichModelSummary>
+[2025-10-22 11:03:33,244][src.utils.instantiators][INFO] - [rank: 0] Instantiating callback <lightning.pytorch.callbacks.TQDMProgressBar>
+[2025-10-22 11:03:33,245][src.utils.instantiators][INFO] - [rank: 0] Instantiating callback <lightning.pytorch.callbacks.LearningRateMonitor>
+[2025-10-22 11:03:33,245][__main__][INFO] - [rank: 0] Instantiating loggers...
+[2025-10-22 11:03:33,245][src.utils.instantiators][INFO] - [rank: 0] Instantiating logger <lightning.pytorch.loggers.csv_logs.CSVLogger>
+[2025-10-22 11:03:33,247][__main__][INFO] - [rank: 0] Instantiating trainer <lightning.pytorch.trainer.Trainer>
+[2025-10-22 11:03:33,258][__main__][INFO] - [rank: 0] Logging hyperparameters!
+[2025-10-22 11:03:33,273][__main__][INFO] - [rank: 0] Starting training!
+[2025-10-22 11:43:40,876][__main__][INFO] - [rank: 0] Starting testing!
+[2025-10-22 11:47:27,665][__main__][INFO] - [rank: 0] Best ckpt path: /zfs/ai4good/student/hgupta/logs/mushroom/train/runs/2025-10-22_11-03-32/checkpoints/epoch_000.ckpt
+[2025-10-22 11:47:27,667][src.utils.utils][INFO] - [rank: 0] Output dir: /zfs/ai4good/student/hgupta/logs/mushroom/train/runs/2025-10-22_11-03-32
+[2025-10-22 11:47:27,668][src.utils.utils][INFO] - [rank: 0] Retrieved metric value! <val/macro_iou=0.012810735031962395>

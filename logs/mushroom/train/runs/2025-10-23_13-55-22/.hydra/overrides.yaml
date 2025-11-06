@@ -1,0 +1,6 @@
+- experiment=baseline
+- model=resnet18
+- logger=csv
+- trainer.max_epochs=20
+- trainer.accelerator=cpu
+- trainer.precision=32

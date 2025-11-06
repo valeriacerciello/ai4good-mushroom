@@ -1,0 +1,7 @@
+{
+  "n_samples": 200,
+  "acc_original": 0.235,
+  "acc_v1": 0.22,
+  "acc_ensemble": 0.195,
+  "acc_ensemble_common_pooled": 0.26
+}

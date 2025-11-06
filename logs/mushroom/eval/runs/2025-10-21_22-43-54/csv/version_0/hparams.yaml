@@ -1,0 +1,99 @@
+model:
+  _target_: src.models.module.ClassificationLitModule
+  num_classes: ${data.num_classes}
+  optimizer:
+    _target_: torch.optim.AdamW
+    _partial_: true
+    lr: 0.001
+    weight_decay: 0.0001
+  scheduler:
+    _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+    _partial_: true
+    T_max: ${trainer.max_epochs}
+    eta_min: 1.0e-06
+  net:
+    _target_: torchvision.models.resnet50
+    num_classes: ${model.num_classes}
+  compile: true
+model/params/total: 23854313
+model/params/trainable: 23854313
+model/params/non_trainable: 0
+data:
+  _target_: src.data.datamodule.MushroomDataModule
+  data_dir: ${paths.data_dir}
+  num_classes: 169
+  batch_size: 128
+  num_workers: 16
+  pin_memory: true
+  image_size: 384
+  rgb_mean:
+  - 0.4308
+  - 0.4084
+  - 0.3393
+  rgb_std:
+  - 0.1063
+  - 0.1023
+  - 0.1123
+  mini: null
+  train_transform:
+  - transform: RandomResizedCrop
+    params:
+      size: ${data.image_size}
+      scale:
+      - 0.08
+      - 1.0
+      ratio:
+      - 0.7
+      - 1.33
+  - transform: RandomHorizontalFlip
+  - transform: ColorJitter
+    params:
+      brightness: 0.4
+      contrast: 0.4
+      saturation: 0.4
+      hue: 0.1
+  - transform: ToTensor
+  - transform: Normalize
+    params:
+      mean: ${data.rgb_mean}
+      std: ${data.rgb_std}
+  val_transform:
+  - transform: Resize
+    params:
+      size: 440
+  - transform: CenterCrop
+    params:
+      size: 384
+  - transform: ToTensor
+  - transform: Normalize
+    params:
+      mean:
+      - 0.4308
+      - 0.4084
+      - 0.3393
+      std:
+      - 0.1063
+      - 0.1023
+      - 0.1123
+  test_transform: ${data.val_transform}
+trainer:
+  _target_: lightning.pytorch.trainer.Trainer
+  default_root_dir: ${paths.output_dir}
+  min_epochs: 1
+  max_epochs: 10
+  accelerator: cpu
+  devices: 1
+  precision: 32
+  check_val_every_n_epoch: 1
+  deterministic: false
+  enable_progress_bar: true
+callbacks: null
+extras:
+  ignore_warnings: false
+  enforce_tags: true
+  print_config: true
+task_name: eval
+tags:
+- dev
+ckpt_path: /zfs/ai4good/datasets/mushroom/baselines/resnet50.ckpt
+seed: null

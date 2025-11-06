@@ -1,0 +1,52 @@
+[2025-10-21 22:27:10,080][src.utils.utils][INFO] - [rank: 0] Enforcing tags! <cfg.extras.enforce_tags=True>
+[2025-10-21 22:27:10,084][src.utils.utils][INFO] - [rank: 0] Printing config tree with Rich! <cfg.extras.print_config=True>
+[2025-10-21 22:27:10,253][__main__][INFO] - [rank: 0] Instantiating datamodule <src.data.datamodule.MushroomDataModule>
+[2025-10-21 22:27:10,456][__main__][INFO] - [rank: 0] Instantiating model <src.models.module.ClassificationLitModule>
+[2025-10-21 22:27:10,595][__main__][INFO] - [rank: 0] Instantiating callbacks...
+[2025-10-21 22:27:10,595][src.utils.instantiators][INFO] - [rank: 0] Instantiating callback <lightning.pytorch.callbacks.ModelCheckpoint>
+[2025-10-21 22:27:10,599][src.utils.instantiators][INFO] - [rank: 0] Instantiating callback <lightning.pytorch.callbacks.EarlyStopping>
+[2025-10-21 22:27:10,600][src.utils.instantiators][INFO] - [rank: 0] Instantiating callback <lightning.pytorch.callbacks.RichModelSummary>
+[2025-10-21 22:27:10,600][src.utils.instantiators][INFO] - [rank: 0] Instantiating callback <lightning.pytorch.callbacks.TQDMProgressBar>
+[2025-10-21 22:27:10,601][src.utils.instantiators][INFO] - [rank: 0] Instantiating callback <lightning.pytorch.callbacks.LearningRateMonitor>
+[2025-10-21 22:27:10,601][__main__][INFO] - [rank: 0] Instantiating loggers...
+[2025-10-21 22:27:10,602][src.utils.instantiators][INFO] - [rank: 0] Instantiating logger <lightning.pytorch.loggers.csv_logs.CSVLogger>
+[2025-10-21 22:27:10,603][__main__][INFO] - [rank: 0] Instantiating trainer <lightning.pytorch.trainer.Trainer>
+[2025-10-21 22:27:10,607][src.utils.utils][ERROR] - [rank: 0] 
+Traceback (most recent call last):
+  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/hydra/_internal/instantiate/_instantiate2.py", line 92, in _call_target
+    return _target_(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/lightning/pytorch/utilities/argparse.py", line 70, in insert_env_defaults
+    return fn(self, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/lightning/pytorch/trainer/trainer.py", line 404, in __init__
+    self._accelerator_connector = _AcceleratorConnector(
+                                  ^^^^^^^^^^^^^^^^^^^^^^
+  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/accelerator_connector.py", line 144, in __init__
+    self._accelerator_flag = self._choose_gpu_accelerator_backend()
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/accelerator_connector.py", line 348, in _choose_gpu_accelerator_backend
+    raise MisconfigurationException("No supported gpu backend found!")
+lightning.fabric.utilities.exceptions.MisconfigurationException: No supported gpu backend found!
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/zfs/ai4good/student/hgupta/ai4good-mushroom/external/ecovision_mushroom/src/utils/utils.py", line 68, in wrap
+    metric_dict, object_dict = task_func(cfg=cfg)
+                               ^^^^^^^^^^^^^^^^^^
+  File "/zfs/ai4good/student/hgupta/ai4good-mushroom/external/ecovision_mushroom/src/train.py", line 70, in train
+    trainer: Trainer = hydra.utils.instantiate(cfg.trainer, callbacks=callbacks, logger=logger)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/hydra/_internal/instantiate/_instantiate2.py", line 226, in instantiate
+    return instantiate_node(
+           ^^^^^^^^^^^^^^^^^
+  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/hydra/_internal/instantiate/_instantiate2.py", line 347, in instantiate_node
+    return _call_target(_target_, partial, args, kwargs, full_key)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/hydra/_internal/instantiate/_instantiate2.py", line 97, in _call_target
+    raise InstantiationException(msg) from e
+hydra.errors.InstantiationException: Error in call to target 'lightning.pytorch.trainer.trainer.Trainer':
+MisconfigurationException('No supported gpu backend found!')
+full_key: trainer
+[2025-10-21 22:27:10,609][src.utils.utils][INFO] - [rank: 0] Output dir: /zfs/ai4good/student/hgupta/logs/mushroom/train/runs/2025-10-21_22-27-10

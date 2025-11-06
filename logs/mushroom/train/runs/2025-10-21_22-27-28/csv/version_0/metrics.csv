@@ -1,0 +1,5 @@
+epoch,lr-AdamW,lr-AdamW-momentum,step,test/loss,test/macro_f1,test/macro_iou,test/micro_accuracy,train/loss,train/macro_f1,train/macro_iou,train/micro_accuracy,val/loss,val/macro_f1,val/macro_f1_best,val/macro_iou,val/macro_iou_best,val/micro_accuracy,val/micro_accuracy_best
+,0.001,0.9,0,,,,,,,,,,,,,,,
+0,,,84,,,,,,,,,4.926535129547119,0.003144768299534917,0.003144768299534917,0.001616219524294138,0.001616219524294138,0.013063524849712849,0.013063524849712849
+0,,,84,,,,,5.153496742248535,0.006177996285259724,0.003132440848276019,0.010724851861596107,,,,,,,
+1,,,85,4.938132286071777,0.003634439315646887,0.0018661903450265527,0.013129242695868015,,,,,,,,,,,

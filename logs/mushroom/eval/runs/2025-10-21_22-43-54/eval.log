@@ -1,0 +1,40 @@
+[2025-10-21 22:43:54,425][src.utils.utils][INFO] - [rank: 0] Enforcing tags! <cfg.extras.enforce_tags=True>
+[2025-10-21 22:43:54,429][src.utils.utils][INFO] - [rank: 0] Printing config tree with Rich! <cfg.extras.print_config=True>
+[2025-10-21 22:43:54,429][src.utils.rich_utils][WARNING] - [rank: 0] Field 'callbacks' not found in config. Skipping 'callbacks' config printing...
+[2025-10-21 22:43:54,468][__main__][INFO] - [rank: 0] Instantiating datamodule <src.data.datamodule.MushroomDataModule>
+[2025-10-21 22:43:54,760][__main__][INFO] - [rank: 0] Instantiating model <src.models.module.ClassificationLitModule>
+[2025-10-21 22:43:55,022][__main__][INFO] - [rank: 0] Instantiating loggers...
+[2025-10-21 22:43:55,023][src.utils.instantiators][INFO] - [rank: 0] Instantiating logger <lightning.pytorch.loggers.csv_logs.CSVLogger>
+[2025-10-21 22:43:55,026][__main__][INFO] - [rank: 0] Instantiating trainer <lightning.pytorch.trainer.Trainer>
+[2025-10-21 22:43:55,036][__main__][INFO] - [rank: 0] Logging hyperparameters!
+[2025-10-21 22:43:55,049][__main__][INFO] - [rank: 0] Starting testing!
+[2025-10-21 22:43:57,294][src.utils.utils][ERROR] - [rank: 0] 
+Traceback (most recent call last):
+  File "/zfs/ai4good/student/hgupta/ai4good-mushroom/external/ecovision_mushroom/src/utils/utils.py", line 68, in wrap
+    metric_dict, object_dict = task_func(cfg=cfg)
+                               ^^^^^^^^^^^^^^^^^^
+  File "/zfs/ai4good/student/hgupta/ai4good-mushroom/external/ecovision_mushroom/src/eval.py", line 75, in evaluate
+    trainer.test(model=model, datamodule=datamodule, ckpt_path=cfg.ckpt_path)
+  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/lightning/pytorch/trainer/trainer.py", line 774, in test
+    return call._call_and_handle_interrupt(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/lightning/pytorch/trainer/call.py", line 49, in _call_and_handle_interrupt
+    return trainer_fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/lightning/pytorch/trainer/trainer.py", line 816, in _test_impl
+    results = self._run(model, ckpt_path=ckpt_path)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/lightning/pytorch/trainer/trainer.py", line 980, in _run
+    self._checkpoint_connector._restore_modules_and_callbacks(ckpt_path)
+  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/checkpoint_connector.py", line 408, in _restore_modules_and_callbacks
+    self.resume_start(checkpoint_path)
+  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/checkpoint_connector.py", line 83, in resume_start
+    loaded_checkpoint = self.trainer.strategy.load_checkpoint(checkpoint_path)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/lightning/pytorch/strategies/strategy.py", line 368, in load_checkpoint
+    return self.checkpoint_io.load_checkpoint(checkpoint_path)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/lightning/fabric/plugins/io/torch_io.py", line 81, in load_checkpoint
+    raise FileNotFoundError(f"Checkpoint file not found: {path}")
+FileNotFoundError: Checkpoint file not found: /zfs/ai4good/datasets/mushroom/baselines/resnet50.ckpt
+[2025-10-21 22:43:57,296][src.utils.utils][INFO] - [rank: 0] Output dir: /zfs/ai4good/student/hgupta/logs/mushroom/eval/runs/2025-10-21_22-43-54
