@@ -107,7 +107,7 @@ class ErrorAnalyzer:
             print(f"\n most common confusion pair:")
             sorted_pairs = self.confusion_pairs.most_common(top_k)
             for i, ((true_class, pred_class), count) in enumerate(sorted_pairs, 1):
-                print(f"   {i:2d}. {true_class:25s} → {pred_class:25s} - {count}次")
+                print(f"   {i:2d}. {true_class:25s} → {pred_class:25s} - {count}times")
         
         # 3. Top-5 error patterns for each class
         print(f"\n Top-5 Error Patterns per Class:")
@@ -119,7 +119,7 @@ class ErrorAnalyzer:
                 top_wrong_preds = self.top5_errors[class_name].most_common(5)
                 for pred_class, count in top_wrong_preds:
                     percentage = (count / total_errors) * 100
-                    print(f"       misclassified as: {pred_class:25s} - {count:3d}次 ({percentage:5.1f}%)")
+                    print(f"       misclassified as: {pred_class:25s} - {count:3d}times ({percentage:5.1f}%)")
         
         # 4. stat info
         total_errors = sum(len(records) for records in self.error_records.values())
@@ -156,11 +156,11 @@ class ErrorAnalyzer:
                     top5_missed[class_name] = total
             
             for class_name, count in sorted(top5_missed.items(), key=lambda x: x[1], reverse=True):
-                f.write(f"   {class_name}: {count}次\n")
+                f.write(f"   {class_name}: {count}times\n")
             
             f.write("\n2. most common confusion pair:\n")
             for (true_class, pred_class), count in self.confusion_pairs.most_common(20):
-                f.write(f"   {true_class} -> {pred_class}: {count}次\n")
+                f.write(f"   {true_class} -> {pred_class}: {count}times\n")
             
             f.write("\n3. Detail\n")
             for class_name in sorted(self.top5_errors.keys()):
