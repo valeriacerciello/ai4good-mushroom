@@ -62,7 +62,7 @@ DEFAULT_PROMPTS_JSON = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/data_prompts_lab
 torch.set_float32_matmul_precision('high')
 DEFAULT_TEXT_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 DEFAULT_PRETRAINED = {
-					# "PE-Core-bigG-14-448": "meta",
+					"PE-Core-bigG-14-448": "meta",
                     "ViT-gopt-16-SigLIP2-384": "webli",
 					"ViT-H-14-378-quickgelu": "dfn5b",
 					"ViT-B-32-quickgelu": "openai",
@@ -924,7 +924,7 @@ def parse_args():
     ap.add_argument("--backbones", nargs="+",default=[b for b in DEFAULT_PRETRAINED.keys()], help="Model backbones to use (default uses DEFAULT_BACKBONES values).")    
     # ap.add_argument("--pretrained", nargs="+", default=None, help="Optional list of pretrained names matching backbones (e.g. openai, dfn5b). If not set, 'openai' will be used for all.")
     ap.add_argument("--pretrained",nargs="+", default=[DEFAULT_PRETRAINED.get(b, "openai") for b in DEFAULT_PRETRAINED.keys()], help="Pretrained weights for each backbone (default uses DEFAULT_PRETRAINED map).")
-    ap.add_argument("--shots", nargs="+", type=int, default=[0, 1, 5, 10, 20, 50])
+    ap.add_argument("--shots", nargs="+", type=int, default=[0, 1, 5, 10, 20, 50, 100])
     ap.add_argument("--save-dir", default=DEFAULT_CACHE_DIR)
     ap.add_argument("--results-dir", default="results")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
