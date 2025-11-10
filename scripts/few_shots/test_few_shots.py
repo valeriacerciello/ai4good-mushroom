@@ -69,7 +69,9 @@ DEFAULT_PRETRAINED = {
 					"ViT-L-14": "openai",
 					"ViT-B-16": "openai",
 					}
-# ---------- globals ----------
+SHOTS = [0, 1, 5, 10, 20, 50, 100]
+ALPHAS = [0.2,0.4,0.6,0.8]
+
 DATA_ROOT = "/home/c/dkorot/AI4GOOD/provided_dir/datasets/mushroom/merged_dataset"
 TRAIN_CSV = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/splits/train.csv"
 VAL_CSV = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/splits/val.csv"
@@ -434,7 +436,7 @@ def train_linear_probe(X_support: np.ndarray, y_support: np.ndarray, X_val: Opti
 
 def train_linear_probe_with_prompts(X_support: np.ndarray, y_support: np.ndarray,
                                     label_names: List[str], text_embs: Dict[str, Any],
-                                    K: int,
+                                    K: int, alpha: float = 0.5,
                                     epochs: int = 200, lr: float = 1e-2, batch_size: int = 32, device: str = "cpu",
                                     seed: int = 42, compile_model: bool = False, show_progress: bool = False) -> nn.Module:
     """
@@ -466,8 +468,21 @@ def train_linear_probe_with_prompts(X_support: np.ndarray, y_support: np.ndarray
     text_X = np.stack(text_X, axis=0)
     text_y = np.array(text_y, dtype=np.int64)
 
-    # concat image support and text pseudo-examples
-    X_aug = np.concatenate([X_support.astype(np.float32), text_X], axis=0)
+    # # concat image support and text pseudo-examples
+    # X_aug = np.concatenate([X_support.astype(np.float32), text_X], axis=0)
+    # y_aug = np.concatenate([y_support.astype(np.int64), text_y], axis=0)
+    
+    # --- Apply alpha weighting between image and text examples ---
+    # Scale the text prototypes before concatenation
+    X_img = X_support.astype(np.float32)
+    X_txt = text_X.astype(np.float32)
+
+    # normalize again just in case
+    X_img /= np.linalg.norm(X_img, axis=1, keepdims=True) + 1e-8
+    X_txt /= np.linalg.norm(X_txt, axis=1, keepdims=True) + 1e-8
+
+    # combine with weighting
+    X_aug = np.concatenate([alpha * X_img, (1.0 - alpha) * X_txt], axis=0)
     y_aug = np.concatenate([y_support.astype(np.int64), text_y], axis=0)
 
     # Call existing trainer
@@ -743,10 +758,11 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
             for alpha in args.alpha_grid:
                 # we reuse alpha to weight text pseudo-examples (optional, could modulate augmentation ratio)
                 model_lin_p = train_linear_probe_with_prompts(
-                    X_sup, y_sup, list(label_names), text_embs_bundle, K,
-                    epochs=args.epochs, lr=args.lr, batch_size=args.batch_size,
-                    device=args.device, seed=args.seed + int(shot),
-                    compile_model=args.no_compile, show_progress=show_progress)
+                    X_sup, y_sup, list(label_names), text_embs_bundle, K, 
+                    alpha=alpha, epochs=args.epochs, lr=args.lr, 
+                    batch_size=args.batch_size, device=args.device, 
+                    seed=args.seed + int(shot), compile_model=args.no_compile, 
+                    show_progress=show_progress)
                 model_lin_p.eval()
                 with torch.no_grad():
                     logits_vl_p = model_lin_p(torch.from_numpy(X_vl).float().to(args.device)).cpu().numpy()
@@ -924,7 +940,7 @@ def parse_args():
     ap.add_argument("--backbones", nargs="+",default=[b for b in DEFAULT_PRETRAINED.keys()], help="Model backbones to use (default uses DEFAULT_BACKBONES values).")    
     # ap.add_argument("--pretrained", nargs="+", default=None, help="Optional list of pretrained names matching backbones (e.g. openai, dfn5b). If not set, 'openai' will be used for all.")
     ap.add_argument("--pretrained",nargs="+", default=[DEFAULT_PRETRAINED.get(b, "openai") for b in DEFAULT_PRETRAINED.keys()], help="Pretrained weights for each backbone (default uses DEFAULT_PRETRAINED map).")
-    ap.add_argument("--shots", nargs="+", type=int, default=[0, 1, 5, 10, 20, 50, 100])
+    ap.add_argument("--shots", nargs="+", type=int, default=SHOTS)
     ap.add_argument("--save-dir", default=DEFAULT_CACHE_DIR)
     ap.add_argument("--results-dir", default="results")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
@@ -944,14 +960,14 @@ def parse_args():
 # Prompt-aware few-shot options (now defaults ON)
     ap.add_argument("--no-prompts-for-prototype", action="store_true", help="Disable text-prompt fusion for prototypes")
     ap.add_argument("--no-prompts-for-linear", action="store_true", help="Disable text-prompt pseudo-examples for linear probe")
-    ap.add_argument("--alpha-grid", type=str, default="0.2,0.4,0.6,0.8", help="Comma-separated list of prompt-alpha values to sweep over")
+    ap.add_argument("--alpha-grid", type=str, default=ALPHAS, help="Comma-separated list of prompt-alpha values to sweep over")
 
     args = ap.parse_args()
 
     # ---- 👇 add these right after parsing ----
     args.use_prompts_for_prototype = not args.no_prompts_for_prototype
     args.use_prompts_for_linear = not args.no_prompts_for_linear
-    args.alpha_grid = [float(x) for x in args.alpha_grid.split(",")]
+    # args.alpha_grid = [float(x) for x in args.alpha_grid.split(",")]
     # ------------------------------------------
 
     return args

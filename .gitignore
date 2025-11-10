@@ -216,6 +216,7 @@ data/**
 
 # model artifacts & results
 features/**
+features.zip
 results/**
 lightning_logs/**
 wandb/**
