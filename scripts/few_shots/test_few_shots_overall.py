@@ -90,7 +90,8 @@ VAL_CSV = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/splits/val.csv"
 TEST_CSV = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/splits/test.csv"
 LABELS = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/data_prompts_label/labels.tsv"
 
-
+with open('data.json', 'r') as f:
+    BEST_ALPHAS = json.load(f)
 
 
 # ------------------------------
