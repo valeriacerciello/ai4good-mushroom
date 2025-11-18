@@ -304,6 +304,17 @@ def balanced_acc(y_true: np.ndarray, y_pred: np.ndarray, K: int) -> float:
         per_class = np.where(cm.sum(1) > 0, np.diag(cm) / cm.sum(1), 0.0)
     return float(np.nanmean(per_class))
 
+def per_class_accuracies(y_true: np.ndarray, y_pred: np.ndarray, K: int) -> np.ndarray:
+    """
+    Return per-class accuracies as a length-K array.
+    per_class[k] = correct predictions for class k / total samples of class k.
+    """
+    cm = confusion_matrix(y_true, y_pred, labels=np.arange(K))
+    with np.errstate(invalid="ignore", divide="ignore"):
+        per_class = np.where(cm.sum(1) > 0, np.diag(cm) / cm.sum(1), 0.0)
+    return per_class
+
+
 
 def sample_few_shot_indices(y_train: np.ndarray, K: int, n_shot: int, rng: np.random.Generator) -> Tuple[np.ndarray, np.ndarray]:
     support_indices = []
@@ -741,6 +752,10 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
     X_vl_gpu = torch.from_numpy(X_vl).float().to(device)
     X_te_gpu = torch.from_numpy(X_te).float().to(device)
     records = []
+    # Per-class accuracy records:
+    # (class_id, class_name, shot, model, alpha, split, backbone, class_acc)
+    class_records = []
+
 
     # Zero-shot if requested
     if show_progress and sys.stdout.isatty():
@@ -754,6 +769,14 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
             top5 = topk_acc(y, scores_zs.cpu().numpy(), 5)
             macro = f1_score(y, yhat, average='macro')
             records.append((0, "zero-shot", 0.0, split_name, backbone, top1, top5, bal, macro))
+
+            # --- per-class accuracies for zero-shot ---
+            per_class = per_class_accuracies(y, yhat, K)
+            for cls_id, acc in enumerate(per_class):
+                class_records.append(
+                    (cls_id, label_names[cls_id], 0, "zero-shot", 0.0, split_name, backbone, float(acc))
+                )
+
 
     shot_list = sorted([s for s in args.shots if s > 0])
     shot_iter = shot_list
@@ -781,6 +804,14 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
             macro = f1_score(y, yhat, average='macro')
             records.append((shot, "prototype", 0.5, split_name, backbone, top1, top5, bal, macro))
 
+            # --- per-class accuracies for standard prototype ---
+            per_class = per_class_accuracies(y, yhat, K)
+            for cls_id, acc in enumerate(per_class):
+                class_records.append(
+                    (cls_id, label_names[cls_id], shot, "prototype", 0.5, split_name, backbone, float(acc))
+                )
+
+
         # --- Prompt-aware prototype sweep ---
         if args.use_prompts_for_prototype:
             if text_embs_bundle is None:
@@ -797,8 +828,17 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
                     bal = balanced_acc(y, yhat, K)
                     top5 = topk_acc(y, scores.cpu().numpy(), 5)
                     macro = f1_score(y, yhat, average='macro')
-                    records.append((shot, f"prototype+prompts(alpha={alpha:.2f})",alpha, split_name,
+                    records.append((shot, f"prototype+prompts(alpha={alpha:.2f})", alpha, split_name,
                                     backbone, top1, top5, bal, macro))
+
+                    # --- per-class accuracies for prototype+prompts ---
+                    per_class = per_class_accuracies(y, yhat, K)
+                    for cls_id, acc in enumerate(per_class):
+                        class_records.append(
+                            (cls_id, label_names[cls_id], shot,
+                             f"prototype+prompts", float(alpha), split_name, backbone, float(acc))
+                        )
+
                     if split_name == "val":
                         split_metrics.append(top1)
                 mean_val = np.mean(split_metrics) if split_metrics else 0
@@ -826,6 +866,14 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
             top5 = topk_acc(y, logits, 5)
             macro = f1_score(y, yhat, average='macro')
             records.append((shot, "linear", 0.50, split_name, backbone, top1, top5, bal, macro))
+
+            # --- per-class accuracies for linear probe ---
+            per_class = per_class_accuracies(y, yhat, K)
+            for cls_id, acc in enumerate(per_class):
+                class_records.append(
+                    (cls_id, label_names[cls_id], shot, "linear", 0.5, split_name, backbone, float(acc))
+                )
+
 
         # --- Prompt-aware linear probe sweep ---
         if args.use_prompts_for_linear:
@@ -856,11 +904,20 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
                     macro = f1_score(y, yhat, average='macro')
                     records.append((shot, f"linear+prompts(alpha={alpha:.2f})", alpha, split_name,
                                     backbone, top1, top5, bal, macro))
+
+                    # --- per-class accuracies for linear+prompts ---
+                    per_class = per_class_accuracies(y, yhat, K)
+                    for cls_id, acc in enumerate(per_class):
+                        class_records.append(
+                            (cls_id, label_names[cls_id], shot,
+                             "linear+prompts", float(alpha), split_name, backbone, float(acc))
+                        )
+
             if best_alpha is not None and show_progress and sys.stdout.isatty():
                 print(f"[{backbone}] best alpha for linear probe={best_alpha:.2f} (val acc={best_acc:.3f})")
 
 
-    return records
+    return records, class_records
 
 
 # ------------------------------
@@ -1108,6 +1165,7 @@ def main():
     show_progress = sys.stdout.isatty()
 
     records_all = []
+    class_records_all = []
 
     if args.direct_eval:
         # direct eval per backbone; nested progress across backbones and shots
@@ -1139,8 +1197,9 @@ def main():
         if show_progress:
             backbone_iter = tqdm(backbone_iter, desc="backbones", leave=True, miniters=1)
         for backbone in backbone_iter:
-            recs = evaluate_backbone(backbone, args, list(label_names), K, show_progress=show_progress)
+            recs, class_recs = evaluate_backbone(backbone, args, list(label_names), K, show_progress=show_progress)
             records_all.extend(recs)
+            class_records_all.extend(class_recs)
 
         out_csv = Path(args.results_dir) / "few_shot_table_all_backbones.csv"
         with open(out_csv, "w", newline="", encoding="utf-8") as f:
@@ -1152,6 +1211,42 @@ def main():
             print(f"Wrote results -> {out_csv}")
         else:
             print(f"Wrote results -> {out_csv}")
+
+        # --- Per-class CSVs: one file per class in results/per_class ---
+        per_class_dir = Path(args.results_dir) / "per_class"
+        per_class_dir.mkdir(parents=True, exist_ok=True)
+
+        # class_records_all entries:
+        # (class_id, class_name, shot, model, alpha, split, backbone, class_acc)
+        per_class_map: Dict[int, List[tuple]] = {}
+        for rec in class_records_all:
+            cls_id = rec[0]
+            per_class_map.setdefault(cls_id, []).append(rec)
+
+        for cls_id, rows in per_class_map.items():
+            # Take class name from the first row
+            cls_name = rows[0][1]
+
+            # Make a safe filename: class_000_Agaricus_augustus.csv
+            safe_name = "".join(
+                c if c.isalnum() or c in ("_", "-") else "_"
+                for c in str(cls_name)
+            )
+            fname = per_class_dir / f"class_{cls_id:03d}_{safe_name}.csv"
+
+            with open(fname, "w", newline="", encoding="utf-8") as f:
+                w = csv.writer(f)
+                w.writerow(
+                    ["class_id", "class_name", "shot", "model", "alpha", "split", "backbone", "class_acc"]
+                )
+                for row in rows:
+                    w.writerow(row)
+
+        if show_progress:
+            print(f"Wrote per-class results -> {per_class_dir}")
+        else:
+            print(f"Wrote per-class results -> {per_class_dir}")
+
 
 
 if __name__ == "__main__":
