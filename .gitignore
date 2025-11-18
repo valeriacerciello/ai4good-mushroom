@@ -1,4 +1,5 @@
 dianas_old_files
+data_prompts_label
 results
 nohup.out
 # Byte-compiled / optimized / DLL files
@@ -265,5 +266,3 @@ results/**
 !data/prompts/class_prompts_attr.json
 !data/prompts/class_prompts_enriched.json
 
-/home/c/dkorot/AI4GOOD/ai4good-mushroom/data_prompts_label/*
-data_prompts_label/best_alphas.json
