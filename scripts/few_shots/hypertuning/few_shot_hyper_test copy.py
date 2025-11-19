@@ -1,27 +1,25 @@
 #!/usr/bin/env python3
-
-# ===== HARD DISABLE TORCH DYNAMO BEFORE ANY PYTORCH IMPORTS =====
-import os
-os.environ["TORCHDYNAMO_DISABLE"] = "1"
-
-import torch._dynamo
-torch._dynamo.disable()
-torch._dynamo.config.suppress_errors = True
-# =================================================================
-
 """
-Patched & parallelized version of test_few_shots_overall_patched.py
+merged_few_shot.py (prompt-aware few-shot extensions)
 
-Major changes:
-- Parallelized CPU-bound sweep operations using ThreadPoolExecutor while avoiding GPU oversubscription.
-- Added --cpu-probes flag to force small linear-probe trainings to run on CPU (default True) so that multiple sweeps can be parallelized across CPU cores while the GPU remains available for heavy encoding work.
-- Added safer max_workers handling: when device is 'cuda' we avoid parallel GPU-using tasks across workers.
-- Vectorized / batched evaluations where safe. Kept all sweep grids identical.
-- Minor DataLoader and caching tweaks retained, and torch.compile invocations preserved where available.
+Unified few-shot + zero-shot evaluation with prompt integration.
+- Zero-shot (mean prompt & prompt pooling via direct-eval)
+- Few-shot: prototype + linear probe (both run for every shot)
+- Prompt-aware few-shot:
+    * prototype combining image prototypes + text prompt embeddings
+    * linear probe trained with prompt embeddings as pseudo-examples
+- Supports multiple CLIP-style backbones via open_clip
+- Caches text and image embeddings
+- Nested tqdm progress bars when running in a TTY (interactive) to minimize overhead on clusters
 
-Save as new file and run similarly to the original.
+Usage:
+    python merged_few_shots.py --data-root ./data --train-csv splits/train.csv --val-csv splits/val.csv \
+        --test-csv splits/test.csv --labels labels.tsv --backbones ViT-B-32 ViT-L-14 --shots 0 1 5 \
+        --device cuda --direct-eval --use-prompts-for-prototype --use-prompts-for-linear --prompt-alpha 0.6
+
+Author: merged from user's scripts + improvements
 """
-
+from __future__ import annotations
 import os
 import sys
 import argparse
@@ -33,11 +31,8 @@ from typing import List, Dict, Any, Optional, Tuple
 import csv
 import numpy as np
 import pandas as pd
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from PIL import Image
-import datetime
-import math
-import time
 
 import torch
 import torch.nn.functional as F
@@ -55,43 +50,20 @@ except Exception as e:
 try:
     from tqdm.auto import tqdm
 except Exception:
-    def tqdm(x, *args, **kwargs): return x
-
+    # fallback: dummy tqdm
+    def tqdm(x, *args, **kwargs):
+        return x
+    
 # Limit CPU threads (avoid oversubscription on shared node)
-MAX_WORKERS = 64
-BATTCH_SIZE = 512
-
-# ---------- global environment & torch tuning (optimized) ----------
-# Limit CPU threads (avoid oversubscription on shared node)
-os.environ.setdefault("OMP_NUM_THREADS", "16")
-os.environ.setdefault("MKL_NUM_THREADS", "16")
-os.environ.setdefault("NUMEXPR_MAX_THREADS", "16")
-# Enable faster GPU memory allocator (if available)
-os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "max_split_size_mb:128")
-# Reduce torch.cudnn nondeterminism cost but keep performance heuristics
+os.environ["OMP_NUM_THREADS"] = "16"
+os.environ["MKL_NUM_THREADS"] = "16"
+os.environ["NUMEXPR_MAX_THREADS"] = "16"
+# Enable faster GPU memory allocator
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+# Allow TensorFloat32 on modern GPUs (L40S supports this)
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.benchmark = True
-# Set reasonable default threads
-torch.set_num_threads(int(os.environ.get("OMP_NUM_THREADS", "16")))
-
-# TorchDynamo/compiler behavior:
-# - Dynamo can cause many costly recompiles when global state (grad_mode, device) changes.
-# - For long-running sweeping/eval jobs it's frequently faster to disable it.
-try:
-    import torch._dynamo as _dynamo
-    # disable dynamo by default, but allow override via env var
-    if os.environ.get("ENABLE_TORCH_DYNAMO", "0") == "1":
-        _dynamo.config.suppress_errors = True
-    else:
-        _dynamo.config.suppress_errors = True
-        _dynamo.disable()
-except Exception:
-    # If torch._dynamo is missing or errors, continue without failing
-    pass
-
-# Helpful debug env flags (uncomment if you want recompilation diagnostics)
-# os.environ.setdefault("TORCH_LOGS", "recompiles")
-
+torch.set_num_threads(int(os.environ["OMP_NUM_THREADS"]))
 
 
 # ---------- globals ----------
@@ -102,13 +74,13 @@ DEFAULT_PROMPTS_JSON = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/data_prompts_lab
 torch.set_float32_matmul_precision('high')
 DEFAULT_TEXT_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 DEFAULT_PRETRAINED = {
-    "PE-Core-bigG-14-448": "meta",
-    "ViT-gopt-16-SigLIP2-384": "webli",
-    "ViT-H-14-378-quickgelu": "dfn5b",
-    "ViT-B-32-quickgelu": "openai",
-    "ViT-L-14": "openai",
-    "ViT-B-16": "openai",
-}
+					"PE-Core-bigG-14-448": "meta",
+                    "ViT-gopt-16-SigLIP2-384": "webli",
+					"ViT-H-14-378-quickgelu": "dfn5b",
+					"ViT-B-32-quickgelu": "openai",
+					"ViT-L-14": "openai",
+					"ViT-B-16": "openai",
+					}
 SHOTS = [0, 1, 5, 10, 20, 50, 100]
 ALPHAS = [0.0,0.2,0.4,0.6,0.8,1.0]
 TEMP_GRID = [1,5,10,20,50,100]
@@ -122,6 +94,10 @@ TRAIN_CSV = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/splits/train.csv"
 VAL_CSV = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/splits/val.csv"
 TEST_CSV = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/splits/test.csv"
 LABELS = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/data_prompts_label/labels.tsv"
+
+# with open('data.json', 'r') as f:
+#     BEST_ALPHAS = json.load(f)
+
 
 # ------------------------------
 # Prompt templates & clip_utils-like functions
@@ -139,6 +115,7 @@ NAME_PROMPT_TEMPLATES = [
     "{name} mushroom",
     "{name} fungus",
 ]
+
 
 def _build_prompt_list_for_label(label: str, prompt_set: str = "ensemble",
                                  include_common_names: bool = False, mg: Optional[Any] = None) -> List[str]:
@@ -174,6 +151,7 @@ def _build_prompt_list_for_label(label: str, prompt_set: str = "ensemble",
     else:
         raise ValueError(f"Unknown prompt_set: {prompt_set}")
 
+
 def get_text_embeddings(labels: List[str],
                         prompt_set: str = "ensemble",
                         model_name: str = "ViT-B-32",
@@ -182,33 +160,24 @@ def get_text_embeddings(labels: List[str],
                         include_common_names: bool = False,
                         common_prompts_path: Optional[str] = None,
                         pretrained: str = "openai",
-                        cache_dir: Optional[Path] = None,
-                        model=None, tokenizer=None) -> Dict[str, Any]:
+                        cache_dir: Optional[Path] = None) -> Dict[str, Any]:
     """
     Compute and cache text embeddings per label.
-
-    Improvements:
-      - Accepts already-created `model` and `tokenizer` so callers can reuse a single CLIP instance per-backbone.
-      - Uses a deterministic cache key based on (backbone, pretrained, prompt_set, label).
-      - Avoids torch.compile on encode_text to prevent repeated slow compile attempts.
-      - Forces text encoding on CPU when device == 'cpu' for easy parallelism.
     Returns: {label: {'prompts': [...], 'prompt_embeddings': Tensor (n x D), 'label_embedding': Tensor (D,)}}
     """
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-    cache_dir = Path(cache_dir or DEFAULT_TEXT_CACHE_DIR)
+    cache_dir = (cache_dir or DEFAULT_TEXT_CACHE_DIR)
+    cache_dir = Path(cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
 
-    # create model/tokenizer once if not provided
-    created_local = False
-    if model is None or tokenizer is None:
-        model, _, _ = open_clip.create_model_and_transforms(model_name, pretrained=pretrained, device=device)
-        tokenizer = open_clip.get_tokenizer(model_name)
-        created_local = True
+    model, _, _ = open_clip.create_model_and_transforms(model_name, pretrained=pretrained, device=device)
+    tokenizer = open_clip.get_tokenizer(model_name)
+    try:
+        model.encode_text = torch.compile(model.encode_text)
+    except Exception:
+        pass
 
-    # Do NOT torch.compile(model.encode_text) here globally; compiling can cause repeated slow recompiles.
-    # If you want to experiment with torch.compile, do so at top-level once with a controlled flag.
-
-    # load common prompts file if requested
+    # try load common prompts if requested
     common_prompts = None
     if include_common_names and common_prompts_path and os.path.exists(common_prompts_path):
         try:
@@ -218,41 +187,27 @@ def get_text_embeddings(labels: List[str],
             common_prompts = None
 
     results: Dict[str, Any] = {}
-    model.eval()
-    # We prefer encoding text on CPU (unless device explicitly set to cuda) to make parallel text encodes inexpensive.
-    txt_device = "cpu" if device == "cpu" else device
-
     for label in labels:
         if common_prompts and label in common_prompts:
             prompts = list(common_prompts[label])
         else:
             prompts = _build_prompt_list_for_label(label, prompt_set, include_common_names, mg=None)
 
-        # cache key unique per-backbone/prompt_set/label list
-        h_input = "|".join(prompts) + "|" + model_name + "|" + pretrained + "|" + prompt_set
-        h = hashlib.sha1(h_input.encode()).hexdigest()
+        # cache key
+        h = hashlib.sha1(("|".join(prompts) + model_name + pretrained).encode()).hexdigest()
         cache_path = cache_dir / f"{label}_{h}.npz"
         if cache_path.exists():
-            try:
-                z = np.load(cache_path, allow_pickle=True)
-                pe = torch.from_numpy(z["prompt_embeddings"])
-                le = torch.from_numpy(z["label_embedding"])
-                results[label] = {"prompts": list(z["prompts"]), "prompt_embeddings": pe, "label_embedding": le}
-                continue
-            except Exception:
-                # if cache load fails, regenerate
-                try:
-                    cache_path.unlink()
-                except Exception:
-                    pass
+            z = np.load(cache_path, allow_pickle=True)
+            pe = torch.tensor(z["prompt_embeddings"])
+            le = torch.tensor(z["label_embedding"])
+            results[label] = {"prompts": list(z["prompts"]), "prompt_embeddings": pe, "label_embedding": le}
+            continue
 
-        # Encode prompts in batches
         all_embs = []
+        model.eval()
         with torch.no_grad():
             for i in range(0, len(prompts), batch_size):
-                toks = tokenizer(prompts[i:i + batch_size])
-                # move tokens to txt_device
-                toks = toks.to(txt_device)
+                toks = tokenizer(prompts[i:i + batch_size]).to(device)
                 emb = model.encode_text(toks)
                 emb = F.normalize(emb, dim=-1)
                 all_embs.append(emb.cpu())
@@ -263,30 +218,10 @@ def get_text_embeddings(labels: List[str],
             D = model.text_projection.shape[1] if hasattr(model, "text_projection") else 512
             pe = torch.empty((0, D))
             le = torch.zeros((D,))
-        # Save compact numpy arrays for fast reload later
         np.savez_compressed(cache_path, prompts=np.array(prompts, dtype=object),
-                            prompt_embeddings=pe.numpy().astype(np.float32),
-                            label_embedding=le.numpy().astype(np.float32))
+                            prompt_embeddings=pe.numpy(), label_embedding=le.numpy())
         results[label] = {"prompts": prompts, "prompt_embeddings": pe, "label_embedding": le}
-
-    # If we created a local model instance, free its GPU memory if any and return
-    if created_local:
-        try:
-            # avoid leaving unused GPU fragments
-            torch.cuda.empty_cache()
-        except Exception:
-            pass
-
     return results
-
-
-# Simple timestamped logger for sweep jobs
-def _log(msg: str):
-    try:
-        ts = datetime.datetime.now().isoformat(sep=' ', timespec='seconds')
-    except Exception:
-        ts = str(datetime.datetime.now())
-    print(f"[{ts}] {msg}")
 
 
 # ------------------------------
@@ -307,6 +242,7 @@ def load_labels(labels_tsv: str) -> Tuple[np.ndarray, Dict[str, int]]:
                 names.append(name)
     return np.array(names, dtype=object), {n: i for i, n in zip(ids, names)}
 
+
 def load_prompts(prompts_path: Optional[str], label_names: List[str]) -> Dict[str, List[str]]:
     if prompts_path and os.path.exists(prompts_path):
         try:
@@ -326,6 +262,7 @@ def load_prompts(prompts_path: Optional[str], label_names: List[str]) -> Dict[st
         except Exception:
             pass
     return {lbl: [f"a photo of a {lbl}.", f"a photograph of {lbl}."] for lbl in label_names}
+
 
 # ------------------------------
 # Feature cache loader (image features)
@@ -357,6 +294,7 @@ def ensure_features(split: str, backbone: str, data_root: str, csv_path: str, la
     z = np.load(cache_path, allow_pickle=True)
     return z["X"], z["y"], z.get("paths", None)
 
+
 # ------------------------------
 # Metrics & sampling
 # ------------------------------
@@ -365,11 +303,13 @@ def topk_acc(y_true: np.ndarray, scores: np.ndarray, k: int) -> float:
     topk = np.argsort(-scores, axis=1)[:, :k]
     return float((topk == y_true[:, None]).any(axis=1).mean())
 
+
 def balanced_acc(y_true: np.ndarray, y_pred: np.ndarray, K: int) -> float:
     cm = confusion_matrix(y_true, y_pred, labels=np.arange(K))
     with np.errstate(invalid="ignore", divide="ignore"):
         per_class = np.where(cm.sum(1) > 0, np.diag(cm) / cm.sum(1), 0.0)
     return float(np.nanmean(per_class))
+
 
 def sample_few_shot_indices(y_train: np.ndarray, K: int, n_shot: int, rng: np.random.Generator) -> Tuple[np.ndarray, np.ndarray]:
     support_indices = []
@@ -384,65 +324,6 @@ def sample_few_shot_indices(y_train: np.ndarray, K: int, n_shot: int, rng: np.ra
         support_labels.append(np.full(n_shot, k, dtype=np.int64))
     return np.concatenate(support_indices), np.concatenate(support_labels)
 
-# ------------------------------
-# Per-class accuracy helper
-# ------------------------------
-def per_class_accuracy(y_true: np.ndarray, y_pred: np.ndarray, label_names: List[str]) -> Dict[str, float]:
-    accs = {}
-    for k, name in enumerate(label_names):
-        mask = (y_true == k)
-        if mask.sum() == 0:
-            accs[name] = float("nan")
-        else:
-            accs[name] = float((y_pred[mask] == k).mean())
-    return accs
-
-def make_record(
-    records,
-    shot,
-    model,
-    alpha,
-    temp,
-    prompt_set,
-    lr,
-    weight_decay,
-    mix_strategy,
-    split_name,
-    backbone,
-    y_true,
-    y_pred,
-    scores,
-    label_names,
-):
-    """
-    Build a unified result record with optional parameters auto-filled as None.
-    """
-    top1 = (y_pred == y_true).mean()
-    bal = balanced_acc(y_true, y_pred,  len(label_names))
-    top5 = topk_acc(y_true, scores, 5)
-    macro = f1_score(y_true, y_pred, average='macro')
-    
-    per_class = per_class_accuracy(y_true, y_pred, label_names)
-
-    rec = {
-    "shot": shot,
-    "model": model,    # e.g. "prototype" or "linear"
-    "alpha": alpha,
-    "temp": temp,
-    "prompt_set": prompt_set,
-    "lr": lr,
-    "weight_decay": weight_decay,
-    "mix_strategy": mix_strategy,
-    "split": split_name,
-    "backbone": backbone,
-    "top1": float(top1),
-    "top5": float(top5),
-    "balanced_acc": float(bal),
-    "macro_f1": float(macro),
-    "per_class_acc": per_class_accuracy(y_true, y_pred, label_names)
-    }
-    records.append(rec)
-    return records
 
 # ------------------------------
 # Prototype & linear probe
@@ -459,9 +340,16 @@ def prototype_classifier(X_support: np.ndarray, y_support: np.ndarray, K: int) -
         prototypes[k] = p
     return prototypes
 
+
 def prototype_classifier_with_prompts(X_support: np.ndarray, y_support: np.ndarray, K: int,
                                       label_names: List[str], text_embs: Dict[str, Any],
                                       alpha: float = 0.5, mix_strategy: str = 'normalize') -> np.ndarray:
+    """
+    Build prototypes by combining few-shot image prototypes and text label embeddings.
+
+    alpha: weight for image prototype (0..1). Combined = normalize(alpha * img_proto + (1-alpha) * text_emb)
+    text_embs: output of get_text_embeddings -> for each label, 'label_embedding' tensor (cpu)
+    """
     D = X_support.shape[1]
     prototypes = np.zeros((K, D), dtype=np.float32)
     for k in range(K):
@@ -492,8 +380,10 @@ def prototype_classifier_with_prompts(X_support: np.ndarray, y_support: np.ndarr
             n = np.linalg.norm(combined)
             if n > 0:
                 combined = combined / n
+        # 'none' -> keep combined as-is (no final normalization)
         prototypes[k] = combined
     return prototypes
+
 
 class LinearProbe(nn.Module):
     def __init__(self, dim: int, K: int):
@@ -503,13 +393,10 @@ class LinearProbe(nn.Module):
     def forward(self, x):
         return self.linear(x)
 
+
 def train_linear_probe(X_support: np.ndarray, y_support: np.ndarray, X_val: Optional[np.ndarray] = None, y_val: Optional[np.ndarray] = None,
                        epochs: int = 200, lr: float = 1e-3, batch_size: int = 32, device: str = "cpu", seed: int = 42,
                        compile_model: bool = False, show_progress: bool = False, weight_decay: float = 1e-4) -> nn.Module:
-    """
-    Train a linear probe. Safe for CPU or GPU.
-    compile_model flag will attempt torch.compile once in try/except (non-fatal if unsupported).
-    """
     torch.manual_seed(seed)
     X = torch.from_numpy(X_support).float().to(device)
     y = torch.from_numpy(y_support).long().to(device)
@@ -517,21 +404,22 @@ def train_linear_probe(X_support: np.ndarray, y_support: np.ndarray, X_val: Opti
     K = int(y.max()) + 1
 
     ds = TensorDataset(X, y)
-    dl = DataLoader(ds, batch_size=batch_size, shuffle=True, num_workers=0)
+    dl = DataLoader(ds, batch_size=batch_size, shuffle=True)
 
     model = LinearProbe(D, K).to(device)
     if compile_model:
         try:
             model = torch.compile(model)
         except Exception:
-            # safe fallback if compile fails
             pass
+    # opt = torch.optim.Adam(model.parameters(), lr=lr)
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
     loss_fn = nn.CrossEntropyLoss()
 
     best_state = None
     best_loss = float('inf')
 
+    # epoch loop with optional tqdm nested bar
     epoch_iter = range(epochs)
     if show_progress and sys.stdout.isatty():
         epoch_iter = tqdm(epoch_iter, desc="epochs", leave=False, miniters=1)
@@ -569,12 +457,68 @@ def train_linear_probe(X_support: np.ndarray, y_support: np.ndarray, X_val: Opti
     return model
 
 
+# def train_linear_probe_with_prompts(X_support: np.ndarray, y_support: np.ndarray,
+#                                     label_names: List[str], text_embs: Dict[str, Any],
+#                                     K: int, alpha: float = 0.5,
+#                                     epochs: int = 200, lr: float = 1e-3, batch_size: int = 32, device: str = "cpu",
+#                                     seed: int = 42, compile_model: bool = False, show_progress: bool = False) -> nn.Module:
+#     """
+#     Train linear probe with prompt embeddings added as one pseudo-example per class.
+
+#     - X_support: (N, D) image embeddings
+#     - y_support: (N,) labels 0..K-1
+#     - text_embs: dict[label] -> {'label_embedding': Tensor}
+#     Returns trained nn.Module
+#     """
+#     # collect text prototypes (one per class)
+#     D = X_support.shape[1]
+#     text_X = []
+#     text_y = []
+#     for k, lbl in enumerate(label_names):
+#         txt_tensor = text_embs.get(lbl, {}).get("label_embedding", None)
+#         if txt_tensor is None:
+#             vec = np.zeros((D,), dtype=np.float32)
+#         else:
+#             if isinstance(txt_tensor, torch.Tensor):
+#                 vec = txt_tensor.cpu().numpy().astype(np.float32)
+#             else:
+#                 vec = np.array(txt_tensor, dtype=np.float32)
+#             n = np.linalg.norm(vec)
+#             if n > 0:
+#                 vec = vec / n
+#         text_X.append(vec)
+#         text_y.append(k)
+#     text_X = np.stack(text_X, axis=0)
+#     text_y = np.array(text_y, dtype=np.int64)
+
+#     # # concat image support and text pseudo-examples
+#     # X_aug = np.concatenate([X_support.astype(np.float32), text_X], axis=0)
+#     # y_aug = np.concatenate([y_support.astype(np.int64), text_y], axis=0)
+    
+#     # --- Apply alpha weighting between image and text examples ---
+#     # Scale the text prototypes before concatenation
+#     X_img = X_support.astype(np.float32)
+#     X_txt = text_X.astype(np.float32)
+
+#     # normalize again just in case
+#     X_img /= np.linalg.norm(X_img, axis=1, keepdims=True) + 1e-8
+#     X_txt /= np.linalg.norm(X_txt, axis=1, keepdims=True) + 1e-8
+
+#     # combine with weighting
+#     X_aug = np.concatenate([alpha * X_img, (1.0 - alpha) * X_txt], axis=0)
+#     y_aug = np.concatenate([y_support.astype(np.int64), text_y], axis=0)
+
+#     # Call existing trainer
+#     model = train_linear_probe(X_aug, y_aug, X_val=None, y_val=None,
+#                                epochs=epochs, lr=lr, batch_size=batch_size,
+#                                device=device, seed=seed, compile_model=compile_model, show_progress=show_progress)
+#     return model
 def train_linear_probe_with_prompts(
     X_support, y_support, label_names, text_embs, K, alpha=0.5,
     epochs=200, lr=1e-3, batch_size=32, device="cpu",
     seed=42, compile_model=False, show_progress=False):
 
-    # mix image & text features per class and then call train_linear_probe
+    # --- mix image & text features per class ---
     X_mixed = []
     y_mixed = []
     for k, lbl in enumerate(label_names):
@@ -588,18 +532,18 @@ def train_linear_probe_with_prompts(
         mixed /= np.linalg.norm(mixed, axis=1, keepdims=True) + 1e-8
         X_mixed.append(mixed)
         y_mixed.append(np.full(len(mixed), k))
-    if not X_mixed:
-        # nothing to train
-        D = X_support.shape[1]
-        model = LinearProbe(D, K)
-        return model
     X_aug = np.concatenate(X_mixed, axis=0)
     y_aug = np.concatenate(y_mixed, axis=0)
 
+    # --- train standard linear probe ---
     model = train_linear_probe(
-        X_aug, y_aug, epochs=epochs, lr=lr, batch_size=batch_size,
-        device=device, seed=seed, compile_model=compile_model, show_progress=show_progress)
+        X_aug, y_aug,
+        epochs=epochs, lr=lr, batch_size=batch_size,
+        device=device, seed=seed,
+        compile_model=compile_model, show_progress=show_progress)
     return model
+
+
 
 # ------------------------------
 # Zero-shot (mean prompt) caching
@@ -647,6 +591,7 @@ def zero_shot_scores(label_names: List[str], backbone: str, pretrained: str, dev
     np.savez_compressed(cache_path, mean_embeddings=mean_embeddings)
     return mean_embeddings
 
+
 # ------------------------------
 # Image encoding utilities (batched) with progress
 # ------------------------------
@@ -671,38 +616,29 @@ class ImageDataset(Dataset):
 def encode_images(model, preprocess, image_paths: List[str], device: str, batch_size: int = 32,
                   cache_prefix: Optional[str] = None, cache_dir: str = DEFAULT_CACHE_DIR, root: str = ".",
                   show_progress: bool = False):
-    """
-    Faster and more deterministic image encoder:
-      - Uses vectorized DataLoader with fewer workers to avoid CPU oversubscription.
-      - Writes/reads float32 .npy cache for faster IO.
-      - Returns a contiguous torch.Tensor on CPU (list in calling code still works).
-    """
-    cache_dir = Path(cache_dir)
     if cache_prefix:
-        cache_path = cache_dir / f"{cache_prefix}.npy"
+        cache_path = Path(cache_dir) / f"{cache_prefix}.npz"
         if cache_path.exists():
             try:
-                arr = np.load(cache_path, mmap_mode="r")
-                # convert to list of tensors to keep API compatibility
-                return [torch.from_numpy(arr[i]) for i in range(arr.shape[0])]
+                arr = np.load(cache_path)["embeddings"]
+                return [torch.tensor(a) for a in arr]
             except Exception:
-                try:
-                    cache_path.unlink()
-                except Exception:
-                    pass
+                pass
 
     dataset = ImageDataset(image_paths, preprocess, root=root)
-    n_workers = min(8, max(0, (os.cpu_count() or 4) // 2))
+    # loader = DataLoader(dataset, batch_size=batch_size, num_workers=4, pin_memory=True)
     loader = DataLoader(
-        dataset,
-        batch_size=batch_size,
-        num_workers=n_workers,
-        pin_memory=True,
-        persistent_workers=(n_workers > 0),
-        prefetch_factor=2 if n_workers > 0 else 1
-    )
+                        dataset,
+                        batch_size=batch_size,
+                        num_workers=min(16, os.cpu_count() // 4),
+                        pin_memory=True,
+                        persistent_workers=True,
+                        prefetch_factor=4
+                        )
+
+
     model.eval()
-    embs = []
+    emb_list = []
     it = loader
     if show_progress and sys.stdout.isatty():
         it = tqdm(loader, desc="encode_images", leave=False, miniters=1)
@@ -711,19 +647,17 @@ def encode_images(model, preprocess, image_paths: List[str], device: str, batch_
             batch = [b for b in batch if b is not None]
             if not batch:
                 continue
-            batch_tensor = torch.stack(batch).to(device, non_blocking=True)
-            # encode with the model; avoid automatic mixed precision for smaller models.
-            with torch.cuda.amp.autocast(enabled=(device != "cpu")):
-                emb = model.encode_image(batch_tensor)
+            batch = torch.stack(batch).to(device, non_blocking=True)
+            # emb = model.encode_image(batch)
+            with torch.cuda.amp.autocast(dtype=torch.float16):
+                emb = model.encode_image(batch)
             emb = F.normalize(emb, dim=-1)
-            embs.append(emb.cpu())
-    if not embs:
+            emb_list.append(emb.cpu())
+    if not emb_list:
         return []
-    emb_all = torch.cat(embs, dim=0)
+    emb_all = torch.cat(emb_list)
     if cache_prefix:
-        # write compact float32 contiguous file for fast mmap later
-        np.save(str(Path(cache_dir) / f"{cache_prefix}.npy"), emb_all.numpy().astype(np.float32))
-    # Keep API same: return list of tensors
+        np.savez_compressed(Path(cache_dir) / f"{cache_prefix}.npz", embeddings=emb_all.numpy())
     return list(emb_all)
 
 
@@ -742,6 +676,7 @@ def get_text_embeddings_bundle_from_clip(model_name: str, model, tokenizer, labe
         with torch.no_grad():
             for i in range(0, len(prompts), batch_size):
                 toks = tokenizer(prompts[i:i + batch_size]).to(device)
+                # emb = model.encode_text(toks)
                 with torch.cuda.amp.autocast(dtype=torch.float16):
                     emb = model.encode_text(toks)
                 emb = F.normalize(emb, dim=-1)
@@ -756,6 +691,7 @@ def get_text_embeddings_bundle_from_clip(model_name: str, model, tokenizer, labe
         results[lbl] = {"prompts": prompts, "prompt_embeddings": pe, "label_embedding": le}
     return results
 
+
 def score_all_vectorized(image_embeddings: List[torch.Tensor], mean_dict: Dict[str, torch.Tensor], labels: List[str]):
     img_mat = torch.stack([e for e in image_embeddings if e is not None])
     mean_mat = torch.stack([mean_dict[l] for l in labels])
@@ -763,341 +699,200 @@ def score_all_vectorized(image_embeddings: List[torch.Tensor], mean_dict: Dict[s
     preds_idx = sims.argmax(dim=1)
     return [labels[i] for i in preds_idx]
 
+
 def acc_from_preds(preds: List[str], trues: List[str]) -> float:
     return float(sum(p == t for p, t in zip(preds, trues)) / len(trues))
+
 
 # ------------------------------
 # High-level per-backbone evaluation (cached features) with nested progress bars
 # ------------------------------
 def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List[str], K: int, show_progress: bool = False):
-    """
-    Main evaluation function. Major parallelization strategy:
-      - For prototype prompt-alpha sweeps we parallelize alpha evaluations using ThreadPoolExecutor (cpu-bound).
-      - For linear probe sweeps: training uses device=args.probe_device (CPU by default to avoid GPU oversubscription).
-        Trainings across (lr,wd) are submitted to ThreadPoolExecutor if probe_device == 'cpu' (parallel).
-        If probe_device == 'cuda' then linear probe training is performed sequentially to avoid GPU contention.
-    """
     model_pretrained = args.pretrained.get(backbone, "openai")
     if show_progress and sys.stdout.isatty():
         print(f"Evaluating backbone: {backbone} (pretrained={model_pretrained})")
 
+    if show_progress and sys.stdout.isatty():
+        print("~~~~~~~~~~~~~~endure features")
     X_tr, y_tr, _ = ensure_features("train", backbone, args.data_root, args.train_csv, args.labels, save_dir=args.save_dir, pretrained=model_pretrained)
     X_vl, y_vl, _ = ensure_features("val", backbone, args.data_root, args.val_csv, args.labels, save_dir=args.save_dir, pretrained=model_pretrained)
     X_te, y_te, _ = ensure_features("test", backbone, args.data_root, args.test_csv, args.labels, save_dir=args.save_dir, pretrained=model_pretrained)
 
-    # Normalize embeddings
+    # Normalize all embeddings to unit length (important for cosine-space CLIP)
+    if show_progress and sys.stdout.isatty():
+        print("~~~~~~~~~~~~~~normalized embeddings")
     X_tr = X_tr / (np.linalg.norm(X_tr, axis=1, keepdims=True) + 1e-8)
     X_vl = X_vl / (np.linalg.norm(X_vl, axis=1, keepdims=True) + 1e-8)
     X_te = X_te / (np.linalg.norm(X_te, axis=1, keepdims=True) + 1e-8)
 
-    # Zero-shot text embeddings
+
+    # Zero-shot text embeddings (for zero-shot only)
+    if show_progress and sys.stdout.isatty():
+        print("~~~~~~~~~~~~~~text embedding stuff")
     text_embeddings = zero_shot_scores(label_names, backbone, model_pretrained, args.device, args.prompts_path, cache_dir=args.save_dir)
 
-    # ------------------------
-    # Precompute per-prompt-set text embeddings if requested
-    # ------------------------
-    # We'll instantiate the CLIP model/tokenizer once per-backbone and reuse for text encodes
+    # Precompute per-prompt-set text embeddings if requested (mode-specific: we'll reuse precomputed bundles)
     text_embs_bundles = {"none": None}
     if args.use_prompts_for_prototype or args.use_prompts_for_linear:
-        try:
-            # create CLIP model + tokenizer once (use CPU for text encoding if cpu_probes True to allow parallel threads)
-            text_device = "cpu" if args.cpu_probes else args.device
-            # clip_model, _, _ = open_clip.create_model_and_transforms(backbone, pretrained=model_pretrained, device=args.device)
-            # Always load text-encoding model on CPU for consistency and thread-safety
-            clip_model, _, _ = open_clip.create_model_and_transforms(    backbone, pretrained=model_pretrained, device="cpu")
-
-            clip_tokenizer = open_clip.get_tokenizer(backbone)
-            # Do not torch.compile encode_text here (can cause repeated recompiles). Keep model in eval mode and reuse.
-            clip_model.eval()
-        except Exception as e:
-            print(f"[warn] failed to create CLIP model for text encodes: {e}")
-            clip_model, clip_tokenizer = None, None
-
         for pset in args.prompt_sets:
-            if show_progress and sys.stdout.isatty():
-                print(f"[{backbone}] computing text embeddings for prompt_set={pset}...")
-            if clip_model is None:
-                text_embs_bundles[pset] = None
-                continue
             try:
-                # reuse the same model/tokenizer and rely on caching inside get_text_embeddings
-                text_embs_bundles[pset] = get_text_embeddings(
-                    list(label_names),
-                    prompt_set=pset,
-                    model_name=backbone,
-                    device=text_device,
-                    batch_size=128,
-                    include_common_names=False,
-                    common_prompts_path=args.prompts_path,
-                    pretrained=model_pretrained,
-                    cache_dir=(Path(args.save_dir) / "text_cache"),
-                    model=clip_model,
-                    tokenizer=clip_tokenizer
-                )
+                if show_progress and sys.stdout.isatty():
+                    print(f"[{backbone}] computing text embeddings for prompt_set={pset}...")
+                text_embs_bundles[pset] = get_text_embeddings(list(label_names),
+                                               prompt_set=pset,
+                                               model_name=backbone,
+                                               device=args.device,
+                                               batch_size=128,
+                                               include_common_names=False,
+                                               common_prompts_path=args.prompts_path,
+                                               pretrained=model_pretrained,
+                                               cache_dir=Path(args.save_dir) / "text_cache")
             except Exception as e:
                 print(f"[warn] failed to get_text_embeddings for prompt_set={pset}: {e}")
                 text_embs_bundles[pset] = None
 
-
-    # Move val/test to torch tensors on device for evaluation
     device = args.device
     X_vl_gpu = torch.from_numpy(X_vl).float().to(device)
     X_te_gpu = torch.from_numpy(X_te).float().to(device)
     records = []
 
     # Zero-shot if requested
+    if show_progress and sys.stdout.isatty():
+        print("~~~~~~~~~~~~~~zero shot")
     if 0 in args.shots:
         for split_name, X_gpu, y in [("val", X_vl_gpu, y_vl), ("test", X_te_gpu, y_te)]:
             scores_zs = X_gpu @ torch.from_numpy(text_embeddings).float().to(device)
             yhat = torch.argmax(scores_zs, dim=1).cpu().numpy()
-            records = make_record(records, 0, "zero-shot", 0.0, 0.0, "none", 0.0, 0.0, "none", split_name, backbone, y, yhat, scores_zs.cpu().numpy(), label_names)
+            top1 = (yhat == y).mean()
+            bal = balanced_acc(y, yhat, K)
+            top5 = topk_acc(y, scores_zs.cpu().numpy(), 5)
+            macro = f1_score(y, yhat, average='macro')
+            records.append((0, "zero-shot", 0.0, split_name, backbone, top1, top5, bal, macro))
 
     shot_list = sorted([s for s in args.shots if s > 0])
     shot_iter = shot_list
     if show_progress and sys.stdout.isatty():
         shot_iter = tqdm(shot_list, desc=f"shots ({backbone})", leave=False, miniters=1)
 
-    # Decide probe device: if user requested CPU probes (default True) we use cpu to allow parallel training; else use same device
-    probe_device = "cpu" if args.cpu_probes else device
-
+    if show_progress and sys.stdout.isatty():
+        print("~~~~~~~~~~~~~~few shot")
     for shot in shot_iter:
-
-        # ---- FEW-SHOT SUPPORT SELECTION (CPU) ----
         rng = np.random.default_rng(args.seed + int(shot))
-        sup_idx, y_sup = sample_few_shot_indices(y_tr, K, shot, rng)
+        sup_idx, sup_labels = sample_few_shot_indices(y_tr, K, shot, rng)
+        X_sup, y_sup = X_tr[sup_idx], sup_labels
+        # Normalize the few-shot subset (safe redundant normalization)
+        X_sup = X_sup / (np.linalg.norm(X_sup, axis=1, keepdims=True) + 1e-8)
 
-        # Build support set from cached CPU embeddings
-        X_sup = X_tr[sup_idx]          # numpy (already normalized above)
-        y_sup = y_sup                  # numpy
 
-        print(f"[{backbone}]   support-set built: {X_sup.shape}")
 
-        # # ---- IMAGE-ONLY PROTOTYPES (GPU) ----
+        # Prototype (standard + mode-specific sweeps)
+        # For prototypes we sweep prompt_set (if prompts allowed), mix_strategy and temp.
+        for prompt_set in (args.prompt_sets if args.use_prompts_for_prototype else ["none"]):
+            text_embs_for_set = text_embs_bundles.get(prompt_set, None)
+            for mix_strategy in args.mix_strategies:
+                for temp in args.temp_grid:
+                    # standard image-only prototype
+                    prototypes = prototype_classifier(X_sup, y_sup, K)
+                    # apply mix_strategy only when prompt fusion used later; here it's image-only so mix not relevant
+                    for split_name, X_gpu, y in [("val", X_vl_gpu, y_vl), ("test", X_te_gpu, y_te)]:
+                        scores = (X_gpu @ torch.from_numpy(prototypes).float().to(device).T) * temp
+                        yhat = torch.argmax(scores, axis=1).cpu().numpy()
+                        top1 = (yhat == y).mean()
+                        bal = balanced_acc(y, yhat, K)
+                        top5 = topk_acc(y, scores.cpu().numpy(), 5)
+                        macro = f1_score(y, yhat, average='macro')
+                        # log irrelevant fields as 0 when not applicable (lr/wd)
+                        records.append((shot, "prototype", 0.0, temp, prompt_set, 0.0, 0.0, mix_strategy, split_name, backbone, top1, top5, bal, macro))
 
-        # ---- Continue prototype sweeps unchanged ----
-        prototype_tasks = []
+                    # Prompt-aware prototype fusion (if enabled)
+                    if args.use_prompts_for_prototype and text_embs_for_set is not None:
+                        best_alpha, best_acc = None, -1.0
+                        for alpha in args.alpha_grid:
+                            # build prototypes with chosen mix strategy
+                            prototypes_prompts = prototype_classifier_with_prompts(
+                                X_sup, y_sup, K, list(label_names), text_embs_for_set, alpha=alpha, mix_strategy=mix_strategy)
+                            for split_name, X_gpu, y in [("val", X_vl_gpu, y_vl), ("test", X_te_gpu, y_te)]:
+                                scores = (X_gpu @ torch.from_numpy(prototypes_prompts).float().to(device).T) * temp
+                                yhat = torch.argmax(scores, axis=1).cpu().numpy()
+                                top1 = (yhat == y).mean()
+                                bal = balanced_acc(y, yhat, K)
+                                top5 = topk_acc(y, scores.cpu().numpy(), 5)
+                                macro = f1_score(y, yhat, average='macro')
+                                records.append((shot, f"prototype+prompts(alpha={alpha:.2f})", alpha, temp, prompt_set, 0.0, 0.0, mix_strategy, split_name, backbone, top1, top5, bal, macro))
+                                if split_name == "val" and top1 > best_acc:
+                                    best_acc = top1
+                                    best_alpha = alpha
+                        if best_alpha is not None and show_progress and sys.stdout.isatty():
+                            print(f"[{backbone}] best alpha for prototype (prompt_set={prompt_set}, mix={mix_strategy})={best_alpha:.2f} (val acc={best_acc:.3f})")
 
-        
-        # Efficient execution of prototype alpha sweeps in parallel across alphas
-        if prototype_tasks:
-            # Number of threads: limit to args.max_workers but also avoid more than needed
-            max_workers = min(args.max_workers, max(1, (os.cpu_count() or 4) // 2))
-            # If the main device is gpu and users didn't enable cpu_probes, still safe to CPU-parallelize these (they use numpy/text_embs)
-            with ThreadPoolExecutor(max_workers=max_workers) as ex:
-                futures = []
-                future_to_job = {}
-                for (prompt_set, mix_strategy, temp, text_embs_for_set, X_sup_loc, y_sup_loc) in prototype_tasks:
-                    # For each alpha, spawn tasks for all alphas (alpha loop is independent)
-                    for alpha in args.alpha_grid:
-                        job_desc = f"prototype+prompts shot={shot} prompt_set={prompt_set} alpha={alpha} mix={mix_strategy} temp={temp}"
-                        _log(f"[{backbone}] SUBMIT {job_desc}")
-                        fut = ex.submit(_eval_prototype_alpha,
-                                         X_sup_loc, y_sup_loc, K,
-                                         list(label_names), text_embs_for_set, alpha, mix_strategy, temp,
-                                         X_vl_gpu, y_vl, X_te_gpu, y_te, backbone, shot, prompt_set)
-                        futures.append(fut)
-                        future_to_job[fut] = job_desc
 
-                # collect results
-                for fut in as_completed(futures):
-                    job = future_to_job.get(fut, "unknown")
-                    try:
-                        recs = fut.result()
-                        _log(f"[{backbone}] DONE {job} -> {len(recs)} records")
-                        # recs is a list of record tuples to append
-                        records.extend(recs)
-                    except Exception as e:
-                        _log(f"[{backbone}] ERROR {job}: {e}")
+        # Linear probe (standard) - mode-specific lr/wd sweeps
+        if show_progress and sys.stdout.isatty():
+            print(f"[{backbone}] training linear probe (lr/wd sweep) for {shot}-shot...")
+        for lr in args.lr_grid:
+            for wd in args.wd_grid:
+                model_lin = train_linear_probe(X_sup, y_sup, X_val=None, y_val=None,
+                                               epochs=args.epochs, lr=lr, batch_size=args.batch_size,
+                                               device=args.device, seed=args.seed + int(shot), compile_model=args.no_compile,
+                                               show_progress=show_progress, weight_decay=wd)
+                model_lin.eval()
+                with torch.no_grad():
+                    logits_vl = model_lin(torch.from_numpy(X_vl).float().to(args.device)).cpu().numpy()
+                    logits_te = model_lin(torch.from_numpy(X_te).float().to(args.device)).cpu().numpy()
+                # For each temp in temp_grid, scale logits and evaluate
+                for temp in args.temp_grid:
+                    logits_vl_t = logits_vl * temp
+                    logits_te_t = logits_te * temp
+                    for split_name, logits, y in [("val", logits_vl_t, y_vl), ("test", logits_te_t, y_te)]:
+                        yhat = logits.argmax(axis=1)
+                        top1 = (yhat == y).mean()
+                        bal = balanced_acc(y, yhat, K)
+                        top5 = topk_acc(y, logits, 5)
+                        macro = f1_score(y, yhat, average='macro')
+                        # For linear (image-only), prompt_set and mix_strategy are irrelevant -> set to 0 or 'none'
+                        records.append((shot, "linear", 0.0, temp, "none", lr, wd, "none", split_name, backbone, top1, top5, bal, macro))
 
-        # Prompt-aware linear probe sweep
+        # --- Prompt-aware linear probe sweep ---
         if args.use_prompts_for_linear:
-            # We'll iterate prompt_set -> alpha -> lr -> wd. We parallelize (lr,wd) if probe_device == 'cpu'
             for prompt_set in args.prompt_sets:
                 text_embs_for_set = text_embs_bundles.get(prompt_set, None)
                 if text_embs_for_set is None:
                     continue
-                # precompute text label embeddings array for quick access inside train func
+                # we'll sweep alpha, lr, wd and temp (mode-specific)
+                best_alpha = None
+                best_acc = -1.0
                 for alpha in args.alpha_grid:
-                    # Prepare training function bound args
-                    # if probe_device == 'cpu' -> parallelize lr/wd
-                    p_jobs = []
                     for lr in args.lr_grid:
                         for wd in args.wd_grid:
-                            p_jobs.append((alpha, lr, wd))
-                    if probe_device == "cpu" and p_jobs:
-                        max_workers = min(args.max_workers, max(1, (os.cpu_count() or 4) // 2))
-                        with ThreadPoolExecutor(max_workers=max_workers) as ex:
-                            futs = []
-                            future_to_job = {}
-                            for alpha, lr, wd in p_jobs:
-                                job_desc = f"linear+prompts shot={shot} prompt_set={prompt_set} alpha={alpha} lr={lr} wd={wd}"
-                                _log(f"[{backbone}] SUBMIT {job_desc}")
-                                fut = ex.submit(
-                                    _train_and_eval_linear_probe_with_prompts,
-                                    X_sup, y_sup,
-                                    X_vl, y_vl,
-                                    X_te, y_te,
-                                    list(label_names),
-                                    text_embs_for_set,
-                                    K,
-                                    alpha,
-                                    args.epochs,
-                                    lr,
-                                    args.batch_size,
-                                    probe_device,
-                                    args.seed + int(shot),
-                                    args.no_compile,
-                                    args.temp_grid,
-                                    backbone,
-                                    shot,
-                                    prompt_set,
-                                    wd
-                                )
-                                futs.append(fut)
-                                future_to_job[fut] = job_desc
+                            model_lin_p = train_linear_probe_with_prompts(
+                                X_sup, y_sup, list(label_names), text_embs_for_set, K,
+                                alpha=alpha, epochs=args.epochs, lr=lr,
+                                batch_size=args.batch_size, device=args.device,
+                                seed=args.seed + int(shot), compile_model=args.no_compile,
+                                show_progress=show_progress)
+                            model_lin_p.eval()
+                            with torch.no_grad():
+                                logits_vl_p = model_lin_p(torch.from_numpy(X_vl).float().to(args.device)).cpu().numpy()
+                                logits_te_p = model_lin_p(torch.from_numpy(X_te).float().to(args.device)).cpu().numpy()
+                            for temp in args.temp_grid:
+                                logits_vl_tp = logits_vl_p * temp
+                                logits_te_tp = logits_te_p * temp
+                                val_acc = (logits_vl_tp.argmax(axis=1) == y_vl).mean()
+                                if val_acc > best_acc:
+                                    best_acc, best_alpha = val_acc, alpha
+                                    best_logits_vl, best_logits_te = logits_vl_tp, logits_te_tp
+                                for split_name, logits, y in [("val", logits_vl_tp, y_vl), ("test", logits_te_tp, y_te)]:
+                                    yhat = logits.argmax(axis=1)
+                                    top1 = (yhat == y).mean()
+                                    bal = balanced_acc(y, yhat, K)
+                                    top5 = topk_acc(y, logits, 5)
+                                    macro = f1_score(y, yhat, average='macro')
+                                    records.append((shot, f"linear+prompts(alpha={alpha:.2f})", alpha, temp, prompt_set, lr, wd, "none", split_name, backbone, top1, top5, bal, macro))
+                if best_alpha is not None and show_progress and sys.stdout.isatty():
+                    print(f"[{backbone}] best alpha for linear+prompts (prompt_set={prompt_set})={best_alpha:.2f} (val acc={best_acc:.3f})")
 
-                            for f in as_completed(futs):
-                                job = future_to_job.get(f, "unknown")
-                                try:
-                                    recs = f.result()
-                                    _log(f"[{backbone}] DONE {job} -> {len(recs)} records")
-                                    records.extend(recs)
-                                except Exception as e:
-                                    _log(f"[{backbone}] ERROR {job}: {e}")
-                    else:
-                        for alpha, lr, wd in p_jobs:
-                            job_desc = f"linear+prompts shot={shot} prompt_set={prompt_set} alpha={alpha} lr={lr} wd={wd}"
-                            _log(f"[{backbone}] RUN {job_desc}")
-                            try:
-                                recs = _train_and_eval_linear_probe_with_prompts(
-                                    X_sup, y_sup, X_vl, y_vl,
-                                        X_te, y_te, list(label_names), text_embs_for_set, K,
-                                    alpha, args.epochs, lr, args.batch_size, probe_device,
-                                    args.seed + int(shot), args.no_compile, args.temp_grid, backbone, shot, prompt_set, wd)
-                                _log(f"[{backbone}] DONE {job_desc} -> {len(recs)} records")
-                                records.extend(recs)
-                            except Exception as e:
-                                _log(f"[{backbone}] ERROR {job_desc}: {e}")
 
     return records
-
-
-def _eval_prototype_alpha(X_sup, y_sup, K, label_names, text_embs_for_set, alpha, mix_strategy, temp,
-                          X_vl_gpu, y_vl, X_te_gpu, y_te, backbone, shot, prompt_set):
-    """
-    Evaluate a single alpha value for prototype+prompts combination.
-    This function is safe to run inside a ThreadPoolExecutor because:
-      - It performs text/image prototype mixing in numpy/CPU.
-      - It returns records; final evaluation uses the already-moved-to-device X_vl_gpu/X_te_gpu tensors.
-    """
-    recs = []
-    try:
-        _log(f"[{backbone}] START linear+prompts shot={shot} prompt_set={prompt_set} alpha={alpha} lr={lr} wd={weight_decay}")
-        # Ensure inputs are on CPU numpy arrays (they may be numpy already)
-        if isinstance(X_sup, torch.Tensor):
-            X_sup_np = X_sup.cpu().numpy()
-        else:
-            X_sup_np = np.array(X_sup, dtype=np.float32)
-
-        # Build prototypes (numpy)
-        prototypes_prompts = prototype_classifier_with_prompts(X_sup_np, y_sup, K, label_names, text_embs_for_set, alpha=alpha, mix_strategy=mix_strategy)
-        # prototypes_prompts is numpy (function returns numpy) -> convert to float32
-        prot_cpu = torch.from_numpy(prototypes_prompts.astype(np.float32))
-
-        # Move prototypes to the device used by evaluation tensors (but do this outside tight loops)
-        prot_on_device = prot_cpu.to(X_vl_gpu.device)
-
-        # Evaluate on val/test using the pre-moved X_vl_gpu / X_te_gpu
-        for split_name, X_gpu, y in [("val", X_vl_gpu, y_vl), ("test", X_te_gpu, y_te)]:
-            # similarity and scaling
-            scores = (X_gpu @ prot_on_device.T) * float(temp)
-            yhat = torch.argmax(scores, axis=1).cpu().numpy()
-            recs = make_record(recs, shot, f"prototype+prompts", alpha, float(temp), prompt_set, 0.0, 0.0, mix_strategy, split_name, backbone, y, yhat, scores.cpu().numpy(), label_names)
-    except Exception as e:
-        print(f"[warn] prototype alpha eval failed: {e}")
-    return recs
-
-
-    # return recs
-def _train_and_eval_linear_probe_with_prompts(
-    X_sup, y_sup,
-    X_vl, y_vl,
-    X_te, y_te,
-    label_names, text_embs_for_set, K,
-    alpha, epochs, lr, batch_size, device, seed, compile_flag,
-    temp_grid, backbone, shot, prompt_set, weight_decay
-):
-    """
-    Train linear probe with prompts pseudo-examples and evaluate across temps.
-    Returns list of record dicts (appends via make_record).
-    - Ensures all numpy arrays are converted to torch tensors BEFORE calling the model.
-    - Keeps evaluation inputs on the requested device.
-    """
-    recs = []
-    try:
-        # Build and train the linear probe (this function returns a torch.nn.Module on `device`)
-        model_lin_p = train_linear_probe_with_prompts(
-            X_sup, y_sup, label_names, text_embs_for_set, K,
-            alpha=alpha, epochs=epochs, lr=lr, batch_size=batch_size,
-            device=device, seed=seed, compile_model=compile_flag, show_progress=False
-        )
-
-        model_lin_p.eval()
-        for split_name, X_arr, y_arr in [
-            ("val", X_vl, y_vl),
-            ("test", X_te, y_te)
-        ]:
-            # ---- Convert X_arr (numpy or torch) to a tensor on device ----
-            if isinstance(X_arr, np.ndarray):
-                X_tensor = torch.from_numpy(X_arr).float().to(device)
-            elif isinstance(X_arr, torch.Tensor):
-                X_tensor = X_arr.float().to(device)
-            else:
-                X_tensor = torch.tensor(np.array(X_arr), dtype=torch.float32).to(device)
-
-            # ---- Forward pass ----
-            with torch.no_grad():
-                logits_tensor = model_lin_p(X_tensor)
-
-            logits_np = logits_tensor.detach().cpu().numpy()
-
-            # ---- Convert y_arr properly to numpy ----
-            if isinstance(y_arr, torch.Tensor):
-                y_true = y_arr.cpu().numpy()
-            else:
-                y_true = np.asarray(y_arr)
-
-            # ---- Temperature sweep ----
-            for temp in temp_grid:
-                logits_tp = logits_np * float(temp)
-                yhat = logits_tp.argmax(axis=1)
-
-                recs = make_record(
-                    recs,
-                    shot,
-                    "linear+prompts",
-                    alpha,
-                    temp,
-                    prompt_set,
-                    lr,
-                    weight_decay,
-                    "none",
-                    split_name,
-                    backbone,
-                    y_true,
-                    yhat,
-                    logits_tp,
-                    label_names
-                )
-
-        _log(f"[{backbone}] FINISH linear+prompts shot={shot} prompt_set={prompt_set} alpha={alpha} lr={lr} wd={weight_decay} -> {len(recs)} records")
-
-    
-    except Exception as e:
-        print(f"[warn] linear+prompts train/eval failed: {e}")
-
-    return recs
-
 
 
 # ------------------------------
@@ -1137,6 +932,7 @@ def build_few_shot_prototypes_direct(labels: List[str], train_csv: str, shots: i
         protos[lbl] = F.normalize(proto, dim=-1).cpu()
     return protos
 
+
 def evaluate_prompts_and_few_shot_direct(labels: List[str], train_csv: str, split_csv: str, shots=(1, 5, 10),
                                          model_name: str = "ViT-B-32", device: str = "cuda",
                                          num_samples: Optional[int] = None, temp: float = 0.12,
@@ -1167,10 +963,26 @@ def evaluate_prompts_and_few_shot_direct(labels: List[str], train_csv: str, spli
     preds_delta_mean = score_all_vectorized(image_embeddings, delta_mean, labels)
     acc_delta_mean = acc_from_preds(preds_delta_mean, true_labels)
 
-    # Vectorized prompt-pooling (GPU-accelerated)
+    # prompt pooling
+    # preds_delta_pool = []
+    # for img_emb in image_embeddings:
+    #     best_label, best_score = None, -1e9
+    #     for lbl, info in prompt_bundle.items():
+    #         pe = info["prompt_embeddings"]
+    #         if pe.numel() == 0:
+    #             continue
+    #         sims = torch.cosine_similarity(img_emb.unsqueeze(0), pe.to(img_emb.dtype), dim=1)
+    #         w = torch.softmax(sims / temp, dim=0)
+    #         pooled = (w * sims).sum().item()
+    #         if pooled > best_score:
+    #             best_label, best_score = lbl, pooled
+    #     preds_delta_pool.append(best_label)
+    # acc_delta_pool = acc_from_preds(preds_delta_pool, true_labels)
+    # --- Vectorized prompt-pooling (GPU-accelerated) ---
     img_mat = torch.stack(image_embeddings).to(device)
     labels = list(prompt_bundle.keys())
     all_prompts = [info["prompt_embeddings"].to(device) for info in prompt_bundle.values()]
+    # Precompute pooled prompt embeddings (mean or softmax-weighted)
     pooled_prompts = []
     for pe in all_prompts:
         if pe.numel() == 0:
@@ -1179,10 +991,12 @@ def evaluate_prompts_and_few_shot_direct(labels: List[str], train_csv: str, spli
             sims = F.normalize(pe, dim=-1)
             pooled_prompts.append(sims.mean(dim=0))
     label_mat = torch.stack(pooled_prompts)
+    # Compute all cosine similarities at once
     sims = F.normalize(img_mat, dim=-1) @ F.normalize(label_mat, dim=-1).T
     preds_idx = sims.argmax(dim=1).cpu().numpy()
     preds_delta_pool = [labels[i] for i in preds_idx]
     acc_delta_pool = acc_from_preds(preds_delta_pool, true_labels)
+
 
     # few-shot prototypes built via model
     few_shot_results = {}
@@ -1192,7 +1006,7 @@ def evaluate_prompts_and_few_shot_direct(labels: List[str], train_csv: str, spli
         acc_proto = acc_from_preds(preds_proto, true_labels)
         few_shot_results[int(k)] = acc_proto
 
-    # linear probe baseline (kept sequential small training)
+    # linear probe baseline
     df_train = pd.read_csv(train_csv)
     X_train, y_train = [], []
     for lbl in labels:
@@ -1239,6 +1053,7 @@ def evaluate_prompts_and_few_shot_direct(labels: List[str], train_csv: str, spli
         "linear_probe": acc_linear,
     }
 
+
 # ------------------------------
 # CLI parsing & main
 # ------------------------------
@@ -1250,7 +1065,8 @@ def parse_args():
     ap.add_argument("--test-csv", default=TEST_CSV, help="Test CSV file")
     ap.add_argument("--labels", default=LABELS, help="TSV with id\tlabel_name")
     ap.add_argument("--prompts-path", default=DEFAULT_PROMPTS_JSON)
-    ap.add_argument("--backbones", nargs="+",default=[b for b in DEFAULT_PRETRAINED.keys()], help="Model backbones to use (default uses DEFAULT_BACKBONES values).")
+    ap.add_argument("--backbones", nargs="+",default=[b for b in DEFAULT_PRETRAINED.keys()], help="Model backbones to use (default uses DEFAULT_BACKBONES values).")    
+    # ap.add_argument("--pretrained", nargs="+", default=None, help="Optional list of pretrained names matching backbones (e.g. openai, dfn5b). If not set, 'openai' will be used for all.")
     ap.add_argument("--pretrained",nargs="+", default=[DEFAULT_PRETRAINED.get(b, "openai") for b in DEFAULT_PRETRAINED.keys()], help="Pretrained weights for each backbone (default uses DEFAULT_PRETRAINED map).")
     ap.add_argument("--shots", nargs="+", type=int, default=SHOTS)
     ap.add_argument("--save-dir", default=DEFAULT_CACHE_DIR)
@@ -1258,79 +1074,85 @@ def parse_args():
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--epochs", type=int, default=100)
-    ap.add_argument("--batch-size", type=int, default=BATTCH_SIZE)
+    # ap.add_argument("--lr", type=float, default=1e-3)
+    ap.add_argument("--batch-size", type=int, default=512)
     ap.add_argument("--direct-eval", action="store_true", help="Run direct prompt-based evaluation (encodes images on the fly).")
     ap.add_argument("--num-samples", type=int, default=None, help="If using direct-eval, optionally subsample test set.")
     ap.add_argument("--temp", type=float, default=0.12, help="Temp for prompt pooling softmax")
-    ap.add_argument("--no-compile", action="store_false", dest="no_compile", help="Dont attempt torch.compile() for speed where possible")
-    ap.add_argument("--max-workers", type=int, default=MAX_WORKERS)
-    ap.add_argument("--cpu-probes", action="store_true", default=True, help="Run linear-probe trainings on CPU to avoid GPU oversubscription (default True). Set to False to force probe training on same device.")
+    ap.add_argument("--no-compile", action="store_false", help="Dont attempt torch.compile() for speed where possible")
+    ap.add_argument("--max-workers", type=int, default=8)
+
     # Prompt-aware few-shot options
+# replace in parse_args()
+
+# Prompt-aware few-shot options (now defaults ON)
     ap.add_argument("--no-prompts-for-prototype", action="store_true", help="Disable text-prompt fusion for prototypes")
     ap.add_argument("--no-prompts-for-linear", action="store_true", help="Disable text-prompt pseudo-examples for linear probe")
     ap.add_argument("--alpha-grid", default=ALPHAS, help="Comma-separated list of prompt-alpha values to sweep over")
-    ap.add_argument("--temp-grid", default=TEMP_GRID, help="Comma-separated list of temperatures for logit scaling")
-    ap.add_argument("--prompt-sets", default=PROMPT_SET, help="Comma-separated prompt sets to sweep")
-    ap.add_argument("--lr-grid", default=LR_GRID, help="Comma-separated learning rates for linear probe")
-    ap.add_argument("--wd-grid", default=WD_GRID, help="Comma-separated weight decay values for linear probe")
-    ap.add_argument("--mix-strategies", default=MIX_STRATEGIES, help="Comma-separated mixing strategies: normalize,none")
-    ap.add_argument("--fast", action="store_true", help="Use fast defaults (few epochs, single worker, small hyper grids)")
+
+    # New sweep args (mode-specific sweeping)
+    ap.add_argument("--temp-grid", default=TEMP_GRID,
+                    help="Comma-separated list of temperatures for logit scaling")
+    ap.add_argument("--prompt-sets", default=PROMPT_SET,
+                    help="Comma-separated prompt sets to sweep")
+    ap.add_argument("--lr-grid", default=LR_GRID,
+                    help="Comma-separated learning rates for linear probe")
+    ap.add_argument("--wd-grid", default=WD_GRID,
+                    help="Comma-separated weight decay values for linear probe")
+    ap.add_argument("--mix-strategies", default=MIX_STRATEGIES,
+                    help="Comma-separated mixing strategies: normalize,none")
 
     args = ap.parse_args()
+
+    # ---- 👇 add these right after parsing ----
     args.use_prompts_for_prototype = not args.no_prompts_for_prototype
     args.use_prompts_for_linear = not args.no_prompts_for_linear
 
-    # Fast preset: override some defaults to make runs quick for debugging
-    if getattr(args, "fast", False):
-        args.epochs = 5
-        args.max_workers = 1
-        # shrink grids for a quick sweep
-        args.lr_grid = [1e-3]
-        args.wd_grid = [0.0]
-        args.alpha_grid = [0.5]
-        args.temp_grid = [1.0]
-        # reduce prompt sets to one
-        args.prompt_sets = ["ensemble"]
-
-    # Ensure lists (argparse sometimes gives string)
-    if isinstance(args.alpha_grid, str):
-        args.alpha_grid = [float(x) for x in args.alpha_grid.split(",")]
-    if isinstance(args.temp_grid, str):
-        args.temp_grid = [float(x) for x in args.temp_grid.split(",")]
-    if isinstance(args.lr_grid, str):
-        args.lr_grid = [float(x) for x in args.lr_grid.split(",")]
-    if isinstance(args.wd_grid, str):
-        args.wd_grid = [float(x) for x in args.wd_grid.split(",")]
-    if isinstance(args.prompt_sets, str):
-        args.prompt_sets = args.prompt_sets.split(",")
-    if isinstance(args.mix_strategies, str):
-        args.mix_strategies = args.mix_strategies.split(",")
-
-    # Make sure max_workers reasonable
-    args.max_workers = max(1, int(min(args.max_workers, (os.cpu_count() or 4))))
-
     return args
+
 
 def main():
     args = parse_args()
     Path(args.results_dir).mkdir(parents=True, exist_ok=True)
     Path(args.save_dir).mkdir(parents=True, exist_ok=True)
 
+    # map pretrained names to backbones
+    # if args.pretrained:
+    #     if len(args.pretrained) != len(args.backbones):
+    #         print("[WARN] --pretrained length does not match --backbones; using 'openai' for missing entries")
+    #     pretrained_map = {b: args.pretrained[i] if i < len(args.pretrained) else "openai" for i, b in enumerate(args.backbones)}
+    # else:
+    #     pretrained_map = {b: "openai" for b in args.backbones}
+    # --- NEW default-pretrained handling ---
     pretrained_map = {}
+
     for b in args.backbones:
+        # Case 1: user provided --pretrained list → use that first
         if hasattr(args, "pretrained") and args.pretrained and len(args.pretrained) > 0:
             idx = args.backbones.index(b)
-            pretrained_map[b] = args.pretrained[idx] if idx < len(args.pretrained) else DEFAULT_PRETRAINED.get(b, "openai")
+            pretrained_map[b] = args.pretrained[idx] if idx < len(args.pretrained) else \
+                                DEFAULT_PRETRAINED.get(b, "openai")
         else:
+            # Case 2: no user override → use DEFAULT_PRETRAINED or fallback to openai
             pretrained_map[b] = DEFAULT_PRETRAINED.get(b, "openai")
+    # Optional: log for debugging
+    # if sys.stdout.isatty():
+    #     print("🔧 Using pretrained mappings:")
+    #     for b, p in pretrained_map.items():
+    #         print(f"  {b:35s} → {p}")
     args.pretrained = pretrained_map
 
+    # print("~~~~~~~~~~~~~~loadin labels")
     label_names, name2id = load_labels(args.labels)
     K = len(label_names)
+
+    # decide whether to show progress bars (TTY) - nested bars will be enabled only in TTY mode
     show_progress = sys.stdout.isatty()
+
     records_all = []
 
     if args.direct_eval:
+        # direct eval per backbone; nested progress across backbones and shots
         backbone_iter = args.backbones
         if show_progress:
             backbone_iter = tqdm(backbone_iter, desc="backbones (direct)", leave=True, miniters=1)
@@ -1358,37 +1180,25 @@ def main():
         backbone_iter = args.backbones
         if show_progress:
             backbone_iter = tqdm(backbone_iter, desc="backbones", leave=True, miniters=1)
-        # If the device is cuda and cpu_probes False, we should avoid parallelizing backbones to prevent GPU contention.
-        # We handle sequential backbone processing here; internal functions parallelize CPU tasks when safe.
         for backbone in backbone_iter:
             recs = evaluate_backbone(backbone, args, list(label_names), K, show_progress=show_progress)
             records_all.extend(recs)
 
-        out_overall_results = Path(args.results_dir) / "few_shot_table_all_backbones.csv"
-        out_class_results = Path(args.results_dir) / "few_shot_table_all_backbones.csv"
-        # with open(out_csv, "w", newline="", encoding="utf-8") as f:
-        #     w = csv.writer(f)
-        #     w.writerow([
-        #         "shot", "model", "alpha", "temp", "prompt_set",
-        #         "lr", "weight_decay", "mix_strategy",
-        #         "split", "backbone",
-        #         "top1", "top5", "balanced_acc", "macro_f1"
-        #     ])
-        #     for r in records_all:
-        #         w.writerow(r)
-        # print(f"Wrote results -> {out_csv}")
-
-        # --- NEW: Save overall results as JSON ---
-        out_json = Path(args.results_dir) / "few_shot_overall_results.json"
-        with open(out_json, "w", encoding="utf-8") as jf:
-            json.dump(records_all, jf, indent=2)
-        print(f"Wrote overall results -> {out_json}")
-
-        # # --- NEW: Save per-class results (already included inside each dict) ---
-        # out_json_pc = Path(args.results_dir) / "few_shot_per_class_results.json"
-        # with open(out_json_pc, "w", encoding="utf-8") as jf:
-        #     json.dump(records_all, jf, indent=2)
-        # print(f"Wrote per-class results -> {out_json_pc}")
+        out_csv = Path(args.results_dir) / "few_shot_table_all_backbones.csv"
+        with open(out_csv, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow([
+                "shot", "model", "alpha", "temp", "prompt_set",
+                "lr", "weight_decay", "mix_strategy",
+                "split", "backbone",
+                "top1", "top5", "balanced_acc", "macro_f1"
+            ])
+            for r in records_all:
+                w.writerow(r)
+        if show_progress:
+            print(f"Wrote results -> {out_csv}")
+        else:
+            print(f"Wrote results -> {out_csv}")
 
 
 if __name__ == "__main__":
