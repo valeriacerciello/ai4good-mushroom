@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-merged_few_shot.py (prompt-aware few-shot extensions)
+test_few_shots_overall.py (prompt-aware few-shot extensions)
 
 Unified few-shot + zero-shot evaluation with prompt integration.
 - Zero-shot (mean prompt & prompt pooling via direct-eval)
@@ -90,7 +90,7 @@ VAL_CSV = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/splits/val.csv"
 TEST_CSV = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/splits/test.csv"
 LABELS = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/data_prompts_label/labels.tsv"
 
-with open('data.json', 'r') as f:
+with open('/home/c/dkorot/AI4GOOD/ai4good-mushroom/data_prompts_label/best_alphas.json', 'r') as f:
     BEST_ALPHAS = json.load(f)
 
 
@@ -780,7 +780,7 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
             bal = balanced_acc(y, yhat, K)
             top5 = topk_acc(y, scores.cpu().numpy(), 5)
             macro = f1_score(y, yhat, average='macro')
-            records.append((shot, "prototype", 0.5, split_name, backbone, top1, top5, bal, macro))
+            records.append((shot, "prototype", 1.0, split_name, backbone, top1, top5, bal, macro))
 
         # --- Prompt-aware prototype sweep ---
         if args.use_prompts_for_prototype:
@@ -826,7 +826,7 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
             bal = balanced_acc(y, yhat, K)
             top5 = topk_acc(y, logits, 5)
             macro = f1_score(y, yhat, average='macro')
-            records.append((shot, "linear", 0.50, split_name, backbone, top1, top5, bal, macro))
+            records.append((shot, "linear", 1.0, split_name, backbone, top1, top5, bal, macro))
 
         # --- Prompt-aware linear probe sweep ---
         if args.use_prompts_for_linear:
