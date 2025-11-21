@@ -113,7 +113,6 @@ LR_GRID = [1e-4,5e-4,1e-3,3e-3]
 WD_GRID = [0,1e-4,5e-4]
 MIX_STRATEGIES = ["normalize","none"]
 
-
 WORK_ENV = "/home/c/dkorot/AI4GOOD"
 DATA_ROOT = WORK_ENV + "/provided_dir/datasets/mushroom/merged_dataset"
 TRAIN_CSV = WORK_ENV + "/ai4good-mushroom/splits/train.csv"
@@ -121,7 +120,7 @@ VAL_CSV = WORK_ENV + "/ai4good-mushroom/splits/val.csv"
 TEST_CSV = WORK_ENV + "/ai4good-mushroom/splits/test.csv"
 LABELS = WORK_ENV + "/ai4good-mushroom/data_prompts_label/labels.tsv"
 RESULTS_DIR = WORK_ENV + "/ai4good-mushroom/results"
-DEFAULT_CACHE_DIR = "/zfs/ai4good/student/dkorot/ai4good-mushroom/ai4good-mushroom/features"
+DEFAULT_CACHE_DIR = "/zfs/ai4good/student/dkorot/ai4good-mushroom/features"
 DEFAULT_TEXT_CACHE_DIR = Path(".cache_text_embeddings")
 DEFAULT_PROMPTS_JSON = WORK_ENV + "/ai4good-mushroom/data_prompts_label/delta_prompts.json"
 
