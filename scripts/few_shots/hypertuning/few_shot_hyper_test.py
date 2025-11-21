@@ -121,7 +121,7 @@ VAL_CSV = WORK_ENV + "/ai4good-mushroom/splits/val.csv"
 TEST_CSV = WORK_ENV + "/ai4good-mushroom/splits/test.csv"
 LABELS = WORK_ENV + "/ai4good-mushroom/data_prompts_label/labels.tsv"
 RESULTS_DIR = WORK_ENV + "/ai4good-mushroom/results"
-DEFAULT_CACHE_DIR = WORK_ENV + "/ai4good-mushroom/features"
+DEFAULT_CACHE_DIR = "/zfs/ai4good/student/dkorot/ai4good-mushroom/ai4good-mushroom/features"
 DEFAULT_TEXT_CACHE_DIR = Path(".cache_text_embeddings")
 DEFAULT_PROMPTS_JSON = WORK_ENV + "/ai4good-mushroom/data_prompts_label/delta_prompts.json"
 
