@@ -95,10 +95,6 @@ except Exception:
 
 
 # ---------- globals ----------
-RESULTS_DIR = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/results"
-DEFAULT_CACHE_DIR = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/features"
-DEFAULT_TEXT_CACHE_DIR = Path(".cache_text_embeddings")
-DEFAULT_PROMPTS_JSON = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/data_prompts_label/delta_prompts.json"
 torch.set_float32_matmul_precision('high')
 DEFAULT_TEXT_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 DEFAULT_PRETRAINED = {
@@ -117,11 +113,18 @@ LR_GRID = [1e-4,5e-4,1e-3,3e-3]
 WD_GRID = [0,1e-4,5e-4]
 MIX_STRATEGIES = ["normalize","none"]
 
-DATA_ROOT = "/home/c/dkorot/AI4GOOD/provided_dir/datasets/mushroom/merged_dataset"
-TRAIN_CSV = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/splits/train.csv"
-VAL_CSV = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/splits/val.csv"
-TEST_CSV = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/splits/test.csv"
-LABELS = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/data_prompts_label/labels.tsv"
+
+WORK_ENV = "/home/c/dkorot/AI4GOOD"
+DATA_ROOT = WORK_ENV + "/provided_dir/datasets/mushroom/merged_dataset"
+TRAIN_CSV = WORK_ENV + "/ai4good-mushroom/splits/train.csv"
+VAL_CSV = WORK_ENV + "/ai4good-mushroom/splits/val.csv"
+TEST_CSV = WORK_ENV + "/ai4good-mushroom/splits/test.csv"
+LABELS = WORK_ENV + "/ai4good-mushroom/data_prompts_label/labels.tsv"
+RESULTS_DIR = WORK_ENV + "/ai4good-mushroom/results"
+DEFAULT_CACHE_DIR = WORK_ENV + "/ai4good-mushroom/features"
+DEFAULT_TEXT_CACHE_DIR = Path(".cache_text_embeddings")
+DEFAULT_PROMPTS_JSON = WORK_ENV + "/ai4good-mushroom/data_prompts_label/delta_prompts.json"
+
 
 # ------------------------------
 # Prompt templates & clip_utils-like functions
