@@ -67,7 +67,8 @@ os.environ.setdefault("OMP_NUM_THREADS", "16")
 os.environ.setdefault("MKL_NUM_THREADS", "16")
 os.environ.setdefault("NUMEXPR_MAX_THREADS", "16")
 # Enable faster GPU memory allocator (if available)
-os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "max_split_size_mb:128")
+# TODO: replace PYTORCH_CUDA_ALLOC_CONF with PYTORCH_ALLOC_CONF
+os.environ.setdefault("PYTORCH_ALLOC_CONF", "max_split_size_mb:128")
 # Reduce torch.cudnn nondeterminism cost but keep performance heuristics
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.benchmark = True
