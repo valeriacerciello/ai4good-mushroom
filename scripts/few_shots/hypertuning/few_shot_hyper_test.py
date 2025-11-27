@@ -96,7 +96,7 @@ except Exception:
 
 # ---------- globals ----------
 torch.set_float32_matmul_precision('high')
-DEFAULT_TEXT_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
 DEFAULT_PRETRAINED = {
     "PE-Core-bigG-14-448": "meta",
     "ViT-gopt-16-SigLIP2-384": "webli",
@@ -107,11 +107,11 @@ DEFAULT_PRETRAINED = {
 }
 SHOTS = [0, 1, 5, 10, 20, 50, 100]
 ALPHAS = [0.0,0.2,0.4,0.6,0.8,1.0]
-TEMP_GRID = [1,5,10,20,50,100]
-PROMPT_SET = ["ensemble","v1","names"]
-LR_GRID = [1e-4,5e-4,1e-3,3e-3]
+TEMP_GRID = [1] #,5,10,20,50,100]
+PROMPT_SET = ["ensemble", "v1", "names", "delta"]
+LR_GRID = [1e-3, 3e-3, 3e-2, 3e-1]
 WD_GRID = [0,1e-4,5e-4]
-MIX_STRATEGIES = ["normalize","none"]
+MIX_STRATEGIES = ["none"]# ["normalize","none"]
 
 WORK_ENV = "/home/c/dkorot/AI4GOOD"
 DATA_ROOT = WORK_ENV + "/provided_dir/datasets/mushroom/merged_dataset"
@@ -121,9 +121,10 @@ TEST_CSV = WORK_ENV + "/ai4good-mushroom/splits/test.csv"
 LABELS = WORK_ENV + "/ai4good-mushroom/data_prompts_label/labels.tsv"
 RESULTS_DIR = WORK_ENV + "/ai4good-mushroom/results"
 DEFAULT_CACHE_DIR = "/zfs/ai4good/student/dkorot/ai4good-mushroom/features"
-DEFAULT_TEXT_CACHE_DIR = Path(".cache_text_embeddings")
 DEFAULT_PROMPTS_JSON = WORK_ENV + "/ai4good-mushroom/data_prompts_label/delta_prompts.json"
 
+DEFAULT_TEXT_CACHE_DIR = Path(".cache_text_embeddings")
+DEFAULT_TEXT_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 # ------------------------------
 # Prompt templates & clip_utils-like functions
@@ -159,6 +160,15 @@ def _build_prompt_list_for_label(label: str, prompt_set: str = "ensemble",
             for tmpl in NAME_PROMPT_TEMPLATES:
                 prompts.append(tmpl.format(name=n))
         return prompts
+    elif prompt_set == "delta":
+        # load delta prompts from JSON
+        try:
+            with open(DEFAULT_PROMPTS_JSON, "r", encoding="utf-8") as f:
+                delta = json.load(f)
+            if label in delta:
+                return list(delta[label])
+        except Exception:
+            raise ValueError(f"Delta prompts requested but failed to load from {DEFAULT_PROMPTS_JSON}")
     elif prompt_set == "ensemble":
         prompts = [t.format(label=label) for t in SHORT_PROMPTS]
         names = [label]
@@ -172,6 +182,15 @@ def _build_prompt_list_for_label(label: str, prompt_set: str = "ensemble",
                 p = tmpl.format(name=n)
                 if p not in prompts:
                     prompts.append(p)
+        try:
+            with open(DEFAULT_PROMPTS_JSON, "r", encoding="utf-8") as f:
+                delta = json.load(f)
+            if label in delta:
+                for dp in delta[label]:
+                    if dp not in prompts:
+                        prompts.append(dp)
+        except Exception:
+            raise ValueError(f"Delta prompts requested but failed to load from {DEFAULT_PROMPTS_JSON}")
         return prompts
     else:
         raise ValueError(f"Unknown prompt_set: {prompt_set}")
@@ -229,6 +248,7 @@ def get_text_embeddings(labels: List[str],
             prompts = list(common_prompts[label])
         else:
             prompts = _build_prompt_list_for_label(label, prompt_set, include_common_names, mg=None)
+
 
         # cache key unique per-backbone/prompt_set/label list
         h_input = "|".join(prompts) + "|" + model_name + "|" + pretrained + "|" + prompt_set
@@ -842,6 +862,7 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
 
 
     # Move val/test to torch tensors on device for evaluation
+    print(f"[{backbone}] moving val/test features to device {args.device}...")
     device = args.device
     X_vl_gpu = torch.from_numpy(X_vl).float().to(device)
     X_te_gpu = torch.from_numpy(X_te).float().to(device)
@@ -850,6 +871,7 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
     # Zero-shot if requested
     if 0 in args.shots:
         for split_name, X_gpu, y in [("val", X_vl_gpu, y_vl), ("test", X_te_gpu, y_te)]:
+            print(f"[{backbone}] zero-shot evaluation on {split_name}...")
             scores_zs = X_gpu @ torch.from_numpy(text_embeddings).float().to(device)
             yhat = torch.argmax(scores_zs, dim=1).cpu().numpy()
             records = make_record(records, 0, "zero-shot", 0.0, 0.0, "none", 0.0, 0.0, "none", split_name, backbone, y, yhat, scores_zs.cpu().numpy(), label_names)
