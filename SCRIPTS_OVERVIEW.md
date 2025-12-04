@@ -2,9 +2,7 @@
 
 This document tracks what each script does and whether it is needed to reproduce the main results in the paper.
 
-We will fill in **Purpose** and **Status** after inspecting each file.
-
-**Status legend (to be used later)**
+**Status legend**
 - **core** – required to reproduce main experiments / final model
 - **support** – helper utilities used by core scripts
 - **legacy** – old / redundant experiments, not needed for reproduction
@@ -14,8 +12,8 @@ We will fill in **Purpose** and **Status** after inspecting each file.
 ## 1. Top-level `scripts/`
 
 - `scripts/README.md`  
-  - Purpose: TBD  
-  - Status: TBD
+  - Purpose: Short human-oriented guide for how to use the main scripts (which order to run them, common flags and defaults).
+  - Status: support
 
 - `scripts/dump_features.py`  
   - Purpose: Extract CLIP image features for a given split (train/val/test) and backbone.  
@@ -25,15 +23,6 @@ We will fill in **Purpose** and **Status** after inspecting each file.
     as a compressed NumPy archive `features/<backbone>/<split>.npz` containing:
     image features `X`, numeric labels `y`, and relative paths `paths`.  
   - Status: **core** (needed to prepare features for all zero-shot and few-shot experiments)
-(TODO: fix small typo in `out_dir = Path(args.save-dir)` → `args.save_dir`.)
-
-
-- `scripts/dump_features.py.save`  
-  - Purpose: Older backup version of `dump_features.py` for CLIP feature extraction.  
-    It implements the same basic logic (read split CSV, load images, encode with CLIP,
-    save `features/<backbone>/<split>.npz`) but without missing-file handling and the
-    current code is truncated/corrupted.  
-  - Status: **legacy** (not used; kept only as an old backup and safe to move/delete later)
 
 
 - `scripts/build_text_prompts.py`  
@@ -100,21 +89,6 @@ We will fill in **Purpose** and **Status** after inspecting each file.
   - Status: **core** (bridge between BLIP captions and attribute-based prompt generation)
 
 
-- `scripts/generate_clip_prompts.py`  
-  - Purpose: Experimental standalone generator for very rich CLIP text prompts based on
-    hard-coded species-specific knowledge.  
-    It defines a `MushroomPromptGenerator` class with:
-      - generic templates about morphology, habitat, growth, etc.,
-      - a small built-in knowledge base for a subset of species (Amanita, Boletus,
-        Cantharellus, Psilocybe, Ganoderma, Laetiporus, Trametes, Lycoperdon, Armillaria),
-      - functions to create basic, descriptive, contextual, and morphological prompts.  
-    The script reads a **hard-coded** training CSV from  
-    `/zfs/ai4good/datasets/mushroom/train.csv`, generates many prompts per species,
-    and writes them to `mushroom_prompts.json` in the repo root.  
-    It is not used by the current BLIP/attribute-based prompt pipeline
-    (`blip_caption_bank.py` → `extract_attributes.py` → `build_text_prompts.py`).  
-  - Status: **legacy** (experimental / unused in final pipeline; kept as reference only)
-
 
 - `scripts/prompt_utils.py`  
   - Purpose: Small helper for loading per-class prompt lists from a JSON file.  
@@ -130,24 +104,6 @@ We will fill in **Purpose** and **Status** after inspecting each file.
   - Status: **support** (utility used by other scripts/notebooks to load prompt sets;
     needs minor cleanup of the absolute path for the submission)
 
-
-- `scripts/clip_baseline.py`  
-  - Purpose: Standalone baseline script to run CLIP zero-shot and few-shot classification
-    directly on the mushroom dataset CSVs (without using precomputed features).  
-    It:
-      - reads a train and validation CSV (`--train_csv`, `--val_csv`) with image paths and labels
-        and resolves paths from Kaggle-style locations to the ZFS dataset root,
-      - loads a CLIP model via `open_clip` (configurable `--model`, `--pretrained`),
-      - builds simple generic text prompts per class (e.g. "a photo of a {species} mushroom"),
-      - computes **zero-shot** accuracy on the validation set by comparing image and text
-        embeddings,
-      - optionally, for `--shots > 0`, selects K images per class from the train CSV,
-        extracts their image embeddings, trains a multinomial logistic regression classifier,
-        and reports **few-shot** validation accuracy.  
-    It also redirects model caches to a ZFS directory (`--cache_dir`) to avoid filling `$HOME`.  
-  - Status: **legacy** (useful as an early CLIP baseline / sanity check, but not part of the
-    final cached-feature + prompt pipeline; also requires cleanup of hard-coded paths and
-    interactive `input()` before being runnable by the TAs)
 
 
 - `scripts/eval_zero_shot.py`  
@@ -187,39 +143,6 @@ We will fill in **Purpose** and **Status** after inspecting each file.
   - Status: **core** (this is the main evaluation script for the CLIP + prompt
     baselines reported in the Experiments section; must remain runnable and well
     documented for the final submission).
-
-
-- `scripts/eval_prompt_sets.py`  
-  - Purpose: **Exploratory analysis script** to compare several prompt sets on a
-    small 200-image subset of the test set, using the original OpenAI `clip`
-    package (ViT-B/32) and a *direct CLIP API* (not `open_clip`).  
-    It was mainly used to sanity-check different prompt banks and prompt-pooling
-    strategies during development.
-  - What it evaluates:
-      - Baseline v1 templates (`SHORT_PROMPTS` from `clip_utils.py`).
-      - Image-derived prompts: `enhanced_mushroom_prompts.json`.
-      - Common-name–enhanced prompts: `enhanced_with_common_names_prompts.json`.
-      - Net-new prompts only: `delta_prompts.json`.
-      - An explicit **union ensemble**: v1 + image-derived + common-name prompts.
-  - Method:
-      - Loads a shuffled subset of **200 samples** from the global test CSV
-        (`/zfs/ai4good/datasets/mushroom/test.csv`).
-      - Encodes images with `clip.load("ViT-B/32")`, normalizing embeddings.
-      - For each prompt set and each class:
-          - builds **mean label embeddings** (mean over prompts),
-          - optionally performs **per-prompt pooling** using a temperature-scaled
-            softmax over per-prompt cosine similarities.
-      - For each configuration (prompt set × mean vs pooling):
-          - predicts the label for each image by maximum similarity,
-          - computes simple **top-1 accuracy** on the 200-sample subset.
-      - Writes a summary JSON `prompt_sets_report.json` with all accuracies and
-        prints them to stdout.
-  - Status: **legacy / exploratory**.  
-    Useful to understand how different prompt banks behaved and to justify some
-    design choices in the paper, but **not part of the main final evaluation
-    pipeline** (which uses `scripts/eval_zero_shot.py` with `open_clip`).  
-    If space is needed for submission, this can be kept in a “dev/analysis”
-    section or clearly marked as supplementary.
 
 
 - `scripts/eval_blip_knn.py`  
@@ -499,8 +422,13 @@ We will fill in **Purpose** and **Status** after inspecting each file.
       - LoRA-tuned CLIP with enriched prompts and strong augmentation.
 
 
-- `scripts/_legacy/`  
-  - Currently empty. Reserved for deprecated or superseded scripts we may remove later or keep only for archival completeness.
+- `scripts/_legacy/` 
+  - This folder contains deprecated or superseded scripts, preserved only for reference.
+    - clip_baseline.py: Early baseline CLIP evaluation (zero-shot/few-shot without cached features).
+    - dump_features.py.save: Backup of an early version of dump_features.py.
+    - eval_prompt_sets.py: Exploratory prompt-set comparison using OpenAI CLIP.
+    - generate_clip_prompts.py: Hard-coded prompt generation prototype.
+
 
 
 ---
@@ -511,6 +439,7 @@ We will fill in **Purpose** and **Status** after inspecting each file.
   - Optimized utilities for building CLIP **text embeddings** from prompt templates for each class label (used in few-shot / prompt-ablation experiments).  
   - Supports multiple prompt sets (`v1`, `names`, `ensemble`), optionally augments with common names via `MushroomPromptGenerator`, and returns per-label: raw prompts, per-prompt embeddings, and a mean-pooled label embedding.  
   - Uses `open_clip` with batched tokenization, optional `torch.compile` for `encode_text`, and **disk caching** of embeddings (`.npz` in `/zfs/.../cache_text`) keyed by label + prompts + model.
+  - Status: **support**
 
 
 - `scripts/few_shots/test_few_shots_overall.py`  
@@ -523,6 +452,7 @@ We will fill in **Purpose** and **Status** after inspecting each file.
     - Cached image and text features (`ensure_features`, `.npz` caching),
     - Optional *direct* evaluation mode that encodes images on-the-fly and compares prompt variants,
     - CSV output (`few_shot_table_all_backbones.csv`) summarizing metrics (Top-1, Top-5, balanced acc, macro F1) across shots, models, and α values.
+    - Status: **support**
 
 
 - `scripts/few_shots/test_few_shots_per_class.py`  
@@ -532,6 +462,7 @@ We will fill in **Purpose** and **Status** after inspecting each file.
   - **Status:** Actively used analysis tool. Produces:
     - A global summary CSV `few_shot_table_all_backbones.csv` (same structure as the overall script),
     - A directory `results/per_class/` with one CSV per species (`class_<id>_<name>.csv`) containing per-class performance across all settings, for detailed error analysis and plots.
+    - Status: **support**
 
 
 - `scripts/few_shots/_legacy/`  
@@ -661,4 +592,10 @@ We will fill in **Purpose** and **Status** after inspecting each file.
 - `scripts/few_shots/hypertuning/_legacy/`  
   - **Purpose:** Folder reserved for deprecated hypertuning experiments and old prototypes that are no longer part of the main pipeline.  
   - **Status:** **Archival only – no files currently used by the active code.**
+
+## 4. Supporting library code: `src/`
+
+- `src/utils/clean_caption.py`  
+  - Purpose: Implements the cleaning/token extraction logic used by `extract_attributes.py`, `build_text_prompts.py`, and `make_caption_preview.py`.  
+  - Status: **support**
 
