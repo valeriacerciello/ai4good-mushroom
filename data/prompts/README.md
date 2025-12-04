@@ -7,6 +7,7 @@ Prompt sets include:
 - `class_prompts_attr.json`
 - `class_prompts_enriched.json`
 - Cleaned versions based on BLIP captions
+
 Used in:
 - `eval_zero_shot.py`
 - `test_few_shots_overall.py`
