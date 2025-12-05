@@ -36,8 +36,8 @@ from scripts.few_shots.hypertuning.few_shot_hyper_test import (
 # Paths
 ###############################################################################
 
-MODEL_PATH = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/final_model.pt"
-SAVE_JSON = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/final_model_eval.json"
+MODEL_PATH = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/final_model_b32.pt"
+SAVE_JSON = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/final_model_eval_b32.json"
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
