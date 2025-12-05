@@ -43,20 +43,22 @@ import open_clip
 #                          FINAL BEST PARAMETERS
 ###############################################################################
 
-FINAL_BACKBONE = "PE-Core-bigG-14-448"
-FINAL_PRETRAINED = "meta"
+# FINAL_BACKBONE = "PE-Core-bigG-14-448"
+# FINAL_PRETRAINED = "meta"
+FINAL_BACKBONE = "ViT-B-32-quickgelu"
+FINAL_PRETRAINED = "openai"
 
 FINAL_MODEL_TYPE = "linear+prompts"
 FINAL_SHOTS = 100
 FINAL_PROMPT_SET = "delta"
 
 FINAL_LR = 0.03
-FINAL_WD = 0.0001
+FINAL_WD = 0.0000
 FINAL_EPOCHS = 200
 FINAL_BATCH_SIZE = 512
 
-BEST_ALPHA_PATH = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/results/best_alpha.json"
-SAVE_PATH = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/final_model.pt"
+BEST_ALPHA_PATH = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/results/best_alpha_b32.json"
+SAVE_PATH = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/final_model_b32.pt"
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -274,13 +276,18 @@ def main():
     parser.add_argument("--train", action="store_true", help="Train final best model")
     parser.add_argument("--predict", type=str, help="Predict label of an image")
     args = parser.parse_args()
+    print("Arguments:", args)
 
     if args.train:
+        print("Starting training of final best model...")
         train_final_model()
 
     if args.predict:
+        print(f"Predicting label for image: {args.predict}")
         label = predict(args.predict)
         print("\nPrediction:", label)
+
+    print("run complete.")
 
 
 if __name__ == "__main__":

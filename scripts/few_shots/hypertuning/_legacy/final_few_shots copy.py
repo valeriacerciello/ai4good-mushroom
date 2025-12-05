@@ -23,8 +23,10 @@ from scripts.few_shots.hypertuning.few_shot_hyper_test import (
 #                 USER-CHOSEN FINAL PARAMETERS
 ###############################################################
 
-FINAL_BACKBONE = "PE-Core-bigG-14-448"
-FINAL_PRETRAINED = "meta"
+# FINAL_BACKBONE = "PE-Core-bigG-14-448"
+# FINAL_PRETRAINED = "meta"
+FINAL_BACKBONE = "ViT-B-32-quickgelu"
+FINAL_PRETRAINED = "openai"
 
 FINAL_MODEL_TYPE = "linear+prompts"
 FINAL_SHOTS = 100
@@ -35,8 +37,8 @@ FINAL_WD = 0.0001
 FINAL_EPOCHS = 200
 FINAL_BATCH_SIZE = 512
 
-BEST_ALPHA_PATH = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/results/best_alpha.json"
-SAVE_PATH = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/final_model.pt"
+BEST_ALPHA_PATH = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/results/best_alpha_b32.json"
+SAVE_PATH = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/final_model_b32.pt"
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
