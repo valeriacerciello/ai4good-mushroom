@@ -1,0 +1,22 @@
+Train shape: (689520, 2)
+Val shape: (15616, 2)
+Test shape: (15614, 2)
+
+Train columns: ['filepath', 'label']
+Val columns: ['filepath', 'label']
+Test columns: ['filepath', 'label']
+
+Split: train
+  unique classes: 169
+
+Split: val
+  unique classes: 169
+
+Split: test
+  unique classes: 169
+
+Per-class counts (train):
+  min: 4080
+  max: 4080
+  mean: 4080.0
+  total: 689520
