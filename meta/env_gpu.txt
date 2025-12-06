@@ -1,0 +1,66 @@
+GPU / CUDA environment snapshot (reproduction)
+
+Machine: iMath cluster node
+Date: 2025-12-06
+Project: ai4good-mushroom
+Branch: valeria_reproduction
+
+[GPU / Driver]
+
+nvidia-smi
+-------------
+NVIDIA-SMI 570.172.08
+Driver Version: 570.172.08
+CUDA Version (driver): 12.8
+
+GPU 0:
+  Name: NVIDIA L40S
+  Total VRAM: 46068 MiB
+  Power cap: 350 W
+
+Comment: All big models (e.g. PE-Core-bigG-14-448) and feature extraction
+were run on this GPU type (NVIDIA L40S, ~46 GB VRAM).
+
+
+[CUDA Toolkit]
+
+nvcc --version
+-------------
+Cuda compilation tools, release 12.9, V12.9.86
+Build cuda_12.9.r12.9/compiler.36037853_0
+
+
+[PyTorch / CUDA Runtime]
+
+Python snippet:
+-------------
+import torch
+print("Torch CUDA available:", torch.cuda.is_available())
+print("Torch CUDA version:", torch.version.cuda)
+print("Torch built with:", torch.__config__.show())
+
+Output (relevant parts):
+-------------
+Torch CUDA available: True
+Torch CUDA version: 12.1
+
+PyTorch built with:
+  - TORCH_VERSION=2.5.1
+  - CUDA Runtime 12.1
+  - CuDNN 90.1 (built against CUDA 12.4)
+  - CUDNN_VERSION=9.1.0
+  - NVCC arch flags: sm_50, sm_60, sm_70, sm_75, sm_80, sm_86, sm_90
+  - BLAS_INFO=mkl
+  - USE_CUDA=ON, USE_CUDNN=ON, USE_NCCL=1
+
+Notes for paper:
+-------------
+- All CLIP / OpenCLIP experiments (including bigG and SigLIP2) and BLIP feature
+  extraction were run on a single NVIDIA L40S GPU (46 GB VRAM).
+- Software stack:
+    * Python: see meta/env_reproduction.txt
+    * PyTorch: 2.5.1
+    * CUDA runtime used by PyTorch: 12.1
+    * cuDNN: 9.1.0
+- This information can be summarized in the Experimental Setup section and detailed
+  in supplementary material if needed.
