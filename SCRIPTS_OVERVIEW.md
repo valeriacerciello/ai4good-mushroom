@@ -12,7 +12,7 @@ This document tracks what each script does and whether it is needed to reproduce
 ## 1. Top-level `scripts/`
 
 - `scripts/README.md`  
-  - Purpose: Short human-oriented guide for how to use the main scripts (which order to run them, common flags and defaults).
+  - Purpose: Guide for how to use the main scripts.
   - Status: support
 
 - `scripts/dump_features.py`  
