@@ -1,323 +1,0 @@
-
-######################################################################
-# Evaluating ViT-B/32
-######################################################################
-
-
-======================================================================
-Evaluating CLIP ViT-B/32
-======================================================================
-Loading CLIP ViT-B/32 model...
-Model loaded on cpu
-Loading prompts from enhanced_with_common_names_prompts_clean.json...
-Found 169 species
-Total prompts: 19141
-Encoding text prompts...
-Encoding prompts:   0%|          | 0/169 [00:00<?, ?it/s]Encoding prompts:   1%|          | 1/169 [00:02<05:40,  2.02s/it]Encoding prompts:   1%|          | 2/169 [00:03<04:58,  1.79s/it]Encoding prompts:   2%|▏         | 3/169 [00:05<05:19,  1.93s/it]Encoding prompts:   2%|▏         | 4/169 [00:07<05:28,  1.99s/it]Encoding prompts:   3%|▎         | 5/169 [00:09<05:21,  1.96s/it]Encoding prompts:   4%|▎         | 6/169 [00:11<05:11,  1.91s/it]Encoding prompts:   4%|▍         | 7/169 [00:13<05:25,  2.01s/it]Encoding prompts:   5%|▍         | 8/169 [00:15<05:06,  1.90s/it]Encoding prompts:   5%|▌         | 9/169 [00:18<06:02,  2.27s/it]Encoding prompts:   6%|▌         | 10/169 [00:20<05:56,  2.24s/it]Encoding prompts:   7%|▋         | 11/169 [00:22<05:47,  2.20s/it]Encoding prompts:   7%|▋         | 12/169 [00:25<06:15,  2.39s/it]Encoding prompts:   8%|▊         | 13/169 [00:28<06:27,  2.48s/it]Encoding prompts:   8%|▊         | 14/169 [00:30<06:08,  2.38s/it]Encoding prompts:   9%|▉         | 15/169 [00:32<05:40,  2.21s/it]Encoding prompts:   9%|▉         | 16/169 [00:34<05:24,  2.12s/it]Encoding prompts:  10%|█         | 17/169 [00:37<06:16,  2.48s/it]Encoding prompts:  11%|█         | 18/169 [00:39<05:45,  2.29s/it]Encoding prompts:  11%|█         | 19/169 [00:41<05:19,  2.13s/it]Encoding prompts:  12%|█▏        | 20/169 [00:42<04:59,  2.01s/it]Encoding prompts:  12%|█▏        | 21/169 [00:45<05:08,  2.09s/it]Encoding prompts:  13%|█▎        | 22/169 [00:50<07:23,  3.02s/it]Encoding prompts:  14%|█▎        | 23/169 [00:54<08:15,  3.39s/it]Encoding prompts:  14%|█▍        | 24/169 [00:59<09:33,  3.95s/it]Encoding prompts:  15%|█▍        | 25/169 [01:04<09:47,  4.08s/it]Encoding prompts:  15%|█▌        | 26/169 [01:10<11:28,  4.82s/it]Encoding prompts:  16%|█▌        | 27/169 [01:15<11:20,  4.79s/it]Encoding prompts:  17%|█▋        | 28/169 [01:21<11:55,  5.07s/it]Encoding prompts:  17%|█▋        | 29/169 [01:31<15:12,  6.52s/it]Encoding prompts:  18%|█▊        | 30/169 [01:35<13:38,  5.89s/it]Encoding prompts:  18%|█▊        | 31/169 [01:42<14:02,  6.10s/it]Encoding prompts:  19%|█▉        | 32/169 [01:47<13:20,  5.84s/it]Encoding prompts:  20%|█▉        | 33/169 [01:51<11:57,  5.28s/it]Encoding prompts:  20%|██        | 34/169 [01:58<13:01,  5.79s/it]Encoding prompts:  21%|██        | 35/169 [02:03<12:47,  5.73s/it]Encoding prompts:  21%|██▏       | 36/169 [02:07<11:12,  5.06s/it]Encoding prompts:  22%|██▏       | 37/169 [02:11<10:25,  4.74s/it]Encoding prompts:  22%|██▏       | 38/169 [02:18<12:09,  5.57s/it]Encoding prompts:  23%|██▎       | 39/169 [02:23<11:30,  5.31s/it]Encoding prompts:  24%|██▎       | 40/169 [02:28<11:16,  5.24s/it]Encoding prompts:  24%|██▍       | 41/169 [02:35<12:12,  5.72s/it]Encoding prompts:  25%|██▍       | 42/169 [02:40<11:50,  5.60s/it]Encoding prompts:  25%|██▌       | 43/169 [02:44<10:43,  5.11s/it]Encoding prompts:  26%|██▌       | 44/169 [02:53<12:56,  6.21s/it]Encoding prompts:  27%|██▋       | 45/169 [02:58<12:11,  5.90s/it]Encoding prompts:  27%|██▋       | 46/169 [03:02<11:01,  5.38s/it]Encoding prompts:  28%|██▊       | 47/169 [03:10<12:12,  6.00s/it]Encoding prompts:  28%|██▊       | 48/169 [03:14<11:13,  5.57s/it]Encoding prompts:  29%|██▉       | 49/169 [03:19<10:44,  5.37s/it]Encoding prompts:  30%|██▉       | 50/169 [03:26<11:30,  5.80s/it]Encoding prompts:  30%|███       | 51/169 [03:32<11:10,  5.68s/it]Encoding prompts:  31%|███       | 52/169 [03:37<10:40,  5.47s/it]Encoding prompts:  31%|███▏      | 53/169 [03:43<11:10,  5.78s/it]Encoding prompts:  32%|███▏      | 54/169 [03:48<10:43,  5.59s/it]Encoding prompts:  33%|███▎      | 55/169 [03:56<12:02,  6.33s/it]Encoding prompts:  33%|███▎      | 56/169 [04:02<11:39,  6.19s/it]Encoding prompts:  34%|███▎      | 57/169 [04:07<10:46,  5.77s/it]Encoding prompts:  34%|███▍      | 58/169 [04:12<10:22,  5.61s/it]Encoding prompts:  35%|███▍      | 59/169 [04:19<10:52,  5.93s/it]Encoding prompts:  36%|███▌      | 60/169 [04:24<10:19,  5.69s/it]Encoding prompts:  36%|███▌      | 61/169 [04:29<10:03,  5.59s/it]Encoding prompts:  37%|███▋      | 62/169 [04:36<10:43,  6.02s/it]Encoding prompts:  37%|███▋      | 63/169 [04:42<10:13,  5.79s/it]Encoding prompts:  38%|███▊      | 64/169 [04:51<11:48,  6.75s/it]Encoding prompts:  38%|███▊      | 65/169 [04:56<10:58,  6.33s/it]Encoding prompts:  39%|███▉      | 66/169 [05:00<09:39,  5.62s/it]Encoding prompts:  40%|███▉      | 67/169 [05:04<08:41,  5.12s/it]Encoding prompts:  40%|████      | 68/169 [05:11<09:42,  5.77s/it]Encoding prompts:  41%|████      | 69/169 [05:16<09:18,  5.58s/it]Encoding prompts:  41%|████▏     | 70/169 [05:21<08:50,  5.36s/it]Encoding prompts:  42%|████▏     | 71/169 [05:27<09:11,  5.62s/it]Encoding prompts:  43%|████▎     | 72/169 [05:33<09:06,  5.64s/it]Encoding prompts:  43%|████▎     | 73/169 [05:38<08:40,  5.42s/it]Encoding prompts:  44%|████▍     | 74/169 [05:45<09:21,  5.91s/it]Encoding prompts:  44%|████▍     | 75/169 [05:51<09:09,  5.85s/it]Encoding prompts:  45%|████▍     | 76/169 [05:56<08:39,  5.58s/it]Encoding prompts:  46%|████▌     | 77/169 [06:03<09:13,  6.01s/it]Encoding prompts:  46%|████▌     | 78/169 [06:08<08:44,  5.76s/it]Encoding prompts:  47%|████▋     | 79/169 [06:12<07:52,  5.25s/it]Encoding prompts:  47%|████▋     | 80/169 [06:19<08:33,  5.77s/it]Encoding prompts:  48%|████▊     | 81/169 [06:24<08:19,  5.68s/it]Encoding prompts:  49%|████▊     | 82/169 [06:29<07:47,  5.38s/it]Encoding prompts:  49%|████▉     | 83/169 [06:35<07:48,  5.45s/it]Encoding prompts:  50%|████▉     | 84/169 [06:41<08:01,  5.66s/it]Encoding prompts:  50%|█████     | 85/169 [06:47<07:58,  5.70s/it]Encoding prompts:  51%|█████     | 86/169 [06:53<08:06,  5.86s/it]Encoding prompts:  51%|█████▏    | 87/169 [06:59<08:12,  6.01s/it]Encoding prompts:  52%|█████▏    | 88/169 [07:07<09:02,  6.70s/it]Encoding prompts:  53%|█████▎    | 89/169 [07:14<08:45,  6.56s/it]Encoding prompts:  53%|█████▎    | 90/169 [07:19<08:07,  6.17s/it]Encoding prompts:  54%|█████▍    | 91/169 [07:24<07:27,  5.74s/it]Encoding prompts:  54%|█████▍    | 92/169 [07:30<07:45,  6.04s/it]Encoding prompts:  55%|█████▌    | 93/169 [07:36<07:39,  6.04s/it]Encoding prompts:  56%|█████▌    | 94/169 [07:42<07:17,  5.83s/it]Encoding prompts:  56%|█████▌    | 95/169 [07:48<07:24,  6.01s/it]Encoding prompts:  57%|█████▋    | 96/169 [07:54<07:04,  5.82s/it]Encoding prompts:  57%|█████▋    | 97/169 [07:57<06:10,  5.15s/it]Encoding prompts:  58%|█████▊    | 98/169 [08:04<06:48,  5.75s/it]Encoding prompts:  59%|█████▊    | 99/169 [08:13<07:41,  6.59s/it]Encoding prompts:  59%|█████▉    | 100/169 [08:18<06:59,  6.08s/it]Encoding prompts:  60%|█████▉    | 101/169 [08:24<07:04,  6.24s/it]Encoding prompts:  60%|██████    | 102/169 [08:29<06:28,  5.80s/it]Encoding prompts:  61%|██████    | 103/169 [08:34<06:03,  5.51s/it]Encoding prompts:  62%|██████▏   | 104/169 [08:42<06:38,  6.14s/it]Encoding prompts:  62%|██████▏   | 105/169 [08:46<06:05,  5.71s/it]Encoding prompts:  63%|██████▎   | 106/169 [08:51<05:47,  5.52s/it]Encoding prompts:  63%|██████▎   | 107/169 [08:58<06:05,  5.90s/it]Encoding prompts:  64%|██████▍   | 108/169 [09:02<05:31,  5.43s/it]Encoding prompts:  64%|██████▍   | 109/169 [09:07<05:15,  5.27s/it]Encoding prompts:  65%|██████▌   | 110/169 [09:14<05:40,  5.77s/it]Encoding prompts:  66%|██████▌   | 111/169 [09:20<05:26,  5.62s/it]Encoding prompts:  66%|██████▋   | 112/169 [09:28<06:07,  6.44s/it]Encoding prompts:  67%|██████▋   | 113/169 [09:33<05:40,  6.07s/it]Encoding prompts:  67%|██████▋   | 114/169 [09:37<05:05,  5.55s/it]Encoding prompts:  68%|██████▊   | 115/169 [09:43<04:58,  5.53s/it]Encoding prompts:  69%|██████▊   | 116/169 [09:50<05:14,  5.93s/it]Encoding prompts:  69%|██████▉   | 117/169 [09:55<05:01,  5.79s/it]Encoding prompts:  70%|██████▉   | 118/169 [10:00<04:46,  5.61s/it]Encoding prompts:  70%|███████   | 119/169 [10:07<04:57,  5.96s/it]Encoding prompts:  71%|███████   | 120/169 [10:13<04:41,  5.75s/it]Encoding prompts:  72%|███████▏  | 121/169 [10:16<04:08,  5.17s/it]Encoding prompts:  72%|███████▏  | 122/169 [10:23<04:27,  5.70s/it]Encoding prompts:  73%|███████▎  | 123/169 [10:29<04:23,  5.74s/it]Encoding prompts:  73%|███████▎  | 124/169 [10:37<04:41,  6.26s/it]Encoding prompts:  74%|███████▍  | 125/169 [10:42<04:26,  6.05s/it]Encoding prompts:  75%|███████▍  | 126/169 [10:48<04:17,  5.99s/it]Encoding prompts:  75%|███████▌  | 127/169 [10:53<03:55,  5.61s/it]Encoding prompts:  76%|███████▌  | 128/169 [10:59<03:53,  5.70s/it]Encoding prompts:  76%|███████▋  | 129/169 [11:04<03:46,  5.66s/it]Encoding prompts:  77%|███████▋  | 130/169 [11:08<03:16,  5.04s/it]Encoding prompts:  78%|███████▊  | 131/169 [11:15<03:34,  5.64s/it]Encoding prompts:  78%|███████▊  | 132/169 [11:23<03:53,  6.31s/it]Encoding prompts:  79%|███████▊  | 133/169 [11:28<03:34,  5.97s/it]Encoding prompts:  79%|███████▉  | 134/169 [11:37<04:03,  6.95s/it]Encoding prompts:  80%|███████▉  | 135/169 [11:44<03:54,  6.89s/it]Encoding prompts:  80%|████████  | 136/169 [11:51<03:46,  6.85s/it]Encoding prompts:  81%|████████  | 137/169 [11:56<03:28,  6.50s/it]Encoding prompts:  82%|████████▏ | 138/169 [12:01<03:03,  5.92s/it]Encoding prompts:  82%|████████▏ | 139/169 [12:08<03:10,  6.34s/it]Encoding prompts:  83%|████████▎ | 140/169 [12:13<02:53,  5.98s/it]Encoding prompts:  83%|████████▎ | 141/169 [12:18<02:33,  5.50s/it]Encoding prompts:  84%|████████▍ | 142/169 [12:23<02:30,  5.58s/it]Encoding prompts:  85%|████████▍ | 143/169 [12:30<02:30,  5.78s/it]Encoding prompts:  85%|████████▌ | 144/169 [12:35<02:17,  5.49s/it]Encoding prompts:  86%|████████▌ | 145/169 [12:41<02:15,  5.64s/it]Encoding prompts:  86%|████████▋ | 146/169 [12:45<02:04,  5.43s/it]Encoding prompts:  87%|████████▋ | 147/169 [12:49<01:49,  4.97s/it]Encoding prompts:  88%|████████▊ | 148/169 [12:56<01:55,  5.49s/it]Encoding prompts:  88%|████████▊ | 149/169 [13:01<01:48,  5.42s/it]Encoding prompts:  89%|████████▉ | 150/169 [13:05<01:35,  5.04s/it]Encoding prompts:  89%|████████▉ | 151/169 [13:13<01:43,  5.75s/it]Encoding prompts:  90%|████████▉ | 152/169 [13:17<01:31,  5.39s/it]Encoding prompts:  91%|█████████ | 153/169 [13:25<01:36,  6.06s/it]Encoding prompts:  91%|█████████ | 154/169 [13:31<01:32,  6.14s/it]Encoding prompts:  92%|█████████▏| 155/169 [13:37<01:23,  5.96s/it]Encoding prompts:  92%|█████████▏| 156/169 [13:41<01:11,  5.47s/it]Encoding prompts:  93%|█████████▎| 157/169 [13:48<01:08,  5.71s/it]Encoding prompts:  93%|█████████▎| 158/169 [13:56<01:11,  6.52s/it]Encoding prompts:  94%|█████████▍| 159/169 [14:01<00:59,  6.00s/it]Encoding prompts:  95%|█████████▍| 160/169 [14:08<00:57,  6.42s/it]Encoding prompts:  95%|█████████▌| 161/169 [14:13<00:47,  5.97s/it]Encoding prompts:  96%|█████████▌| 162/169 [14:17<00:38,  5.49s/it]Encoding prompts:  96%|█████████▋| 163/169 [14:24<00:35,  5.90s/it]Encoding prompts:  97%|█████████▋| 164/169 [14:30<00:28,  5.79s/it]Encoding prompts:  98%|█████████▊| 165/169 [14:34<00:20,  5.20s/it]Encoding prompts:  98%|█████████▊| 166/169 [14:40<00:17,  5.69s/it]Encoding prompts:  99%|█████████▉| 167/169 [14:46<00:11,  5.69s/it]Encoding prompts:  99%|█████████▉| 168/169 [14:48<00:04,  4.66s/it]Encoding prompts: 100%|██████████| 169/169 [14:55<00:00,  5.34s/it]Encoding prompts: 100%|██████████| 169/169 [14:55<00:00,  5.30s/it]
-Loading test data...
-Test samples: 500
-Evaluating with temperature=0.05...
-Testing:   0%|          | 0/16 [00:00<?, ?it/s]Testing:   0%|          | 0/16 [00:00<?, ?it/s]
-Traceback (most recent call last):
-  File "/zfs/ai4good/student/hgupta/eval_all_clip_models.py", line 195, in <module>
-    result = evaluate_clip_model(model_name, prompts_file, n_test_samples, temperature)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/eval_all_clip_models.py", line 103, in evaluate_clip_model
-    for images, labels, species_names in tqdm(test_loader, desc="Testing"):
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/tqdm/std.py", line 1181, in __iter__
-    for obj in iterable:
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 732, in __next__
-    data = self._next_data()
-           ^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 1506, in _next_data
-    return self._process_data(data, worker_id)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 1541, in _process_data
-    data.reraise()
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/_utils.py", line 769, in reraise
-    raise exception
-KeyError: Caught KeyError in DataLoader worker process 0.
-Original Traceback (most recent call last):
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/indexes/base.py", line 3812, in get_loc
-    return self._engine.get_loc(casted_key)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "pandas/_libs/index.pyx", line 167, in pandas._libs.index.IndexEngine.get_loc
-  File "pandas/_libs/index.pyx", line 196, in pandas._libs.index.IndexEngine.get_loc
-  File "pandas/_libs/hashtable_class_helper.pxi", line 7088, in pandas._libs.hashtable.PyObjectHashTable.get_item
-  File "pandas/_libs/hashtable_class_helper.pxi", line 7096, in pandas._libs.hashtable.PyObjectHashTable.get_item
-KeyError: 'path'
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/utils/data/_utils/worker.py", line 349, in _worker_loop
-    data = fetcher.fetch(index)  # type: ignore[possibly-undefined]
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/utils/data/_utils/fetch.py", line 52, in fetch
-    data = [self.dataset[idx] for idx in possibly_batched_index]
-            ~~~~~~~~~~~~^^^^^
-  File "/zfs/ai4good/student/hgupta/eval_all_clip_models.py", line 29, in __getitem__
-    img_path = os.path.join(self.data_dir, row['path'])
-                                           ~~~^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/series.py", line 1133, in __getitem__
-    return self._get_value(key)
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/series.py", line 1249, in _get_value
-    loc = self.index.get_loc(label)
-          ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/indexes/base.py", line 3819, in get_loc
-    raise KeyError(key) from err
-KeyError: 'path'
-
-ERROR evaluating ViT-B/32: Caught KeyError in DataLoader worker process 0.
-Original Traceback (most recent call last):
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/indexes/base.py", line 3812, in get_loc
-    return self._engine.get_loc(casted_key)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "pandas/_libs/index.pyx", line 167, in pandas._libs.index.IndexEngine.get_loc
-  File "pandas/_libs/index.pyx", line 196, in pandas._libs.index.IndexEngine.get_loc
-  File "pandas/_libs/hashtable_class_helper.pxi", line 7088, in pandas._libs.hashtable.PyObjectHashTable.get_item
-  File "pandas/_libs/hashtable_class_helper.pxi", line 7096, in pandas._libs.hashtable.PyObjectHashTable.get_item
-KeyError: 'path'
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/utils/data/_utils/worker.py", line 349, in _worker_loop
-    data = fetcher.fetch(index)  # type: ignore[possibly-undefined]
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/utils/data/_utils/fetch.py", line 52, in fetch
-    data = [self.dataset[idx] for idx in possibly_batched_index]
-            ~~~~~~~~~~~~^^^^^
-  File "/zfs/ai4good/student/hgupta/eval_all_clip_models.py", line 29, in __getitem__
-    img_path = os.path.join(self.data_dir, row['path'])
-                                           ~~~^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/series.py", line 1133, in __getitem__
-    return self._get_value(key)
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/series.py", line 1249, in _get_value
-    loc = self.index.get_loc(label)
-          ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/indexes/base.py", line 3819, in get_loc
-    raise KeyError(key) from err
-KeyError: 'path'
-
-
-######################################################################
-# Evaluating ViT-B/16
-######################################################################
-
-
-======================================================================
-Evaluating CLIP ViT-B/16
-======================================================================
-Loading CLIP ViT-B/16 model...
-  0%|                                               | 0.00/335M [00:00<?, ?iB/s]  0%|▏                                     | 1.59M/335M [00:00<00:21, 16.2MiB/s]  3%|█                                     | 9.30M/335M [00:00<00:06, 53.6MiB/s]  5%|█▊                                    | 16.1M/335M [00:00<00:05, 60.6MiB/s]  7%|██▍                                   | 21.9M/335M [00:00<00:05, 60.6MiB/s]  8%|███▏                                  | 27.7M/335M [00:00<00:07, 45.3MiB/s] 11%|████                                  | 35.3M/335M [00:00<00:05, 54.8MiB/s] 12%|████▋                                 | 41.6M/335M [00:00<00:05, 57.9MiB/s] 15%|█████▌                                | 49.1M/335M [00:00<00:04, 63.7MiB/s] 17%|██████▍                               | 56.2M/335M [00:01<00:04, 66.9MiB/s] 19%|███████▏                              | 63.2M/335M [00:01<00:04, 68.9MiB/s] 21%|███████▉                              | 70.0M/335M [00:01<00:04, 63.1MiB/s] 23%|████████▋                             | 76.6M/335M [00:01<00:04, 65.0MiB/s] 25%|█████████▍                            | 83.0M/335M [00:03<00:31, 8.47MiB/s] 27%|██████████                            | 89.0M/335M [00:03<00:23, 11.2MiB/s] 29%|██████████▉                           | 96.1M/335M [00:04<00:16, 15.4MiB/s] 30%|███████████▊                           | 102M/335M [00:04<00:14, 17.3MiB/s] 32%|████████████▍                          | 106M/335M [00:16<02:35, 1.54MiB/s] 34%|█████████████                          | 112M/335M [00:16<01:46, 2.19MiB/s] 35%|█████████████▋                         | 117M/335M [00:16<01:18, 2.92MiB/s] 37%|██████████████▌                        | 125M/335M [00:16<00:47, 4.64MiB/s] 39%|███████████████▎                       | 131M/335M [00:19<01:00, 3.56MiB/s] 41%|████████████████                       | 138M/335M [00:19<00:40, 5.15MiB/s] 43%|████████████████▊                      | 144M/335M [00:19<00:27, 7.14MiB/s] 45%|█████████████████▍                     | 150M/335M [00:19<00:20, 9.36MiB/s] 46%|██████████████████                     | 155M/335M [00:19<00:15, 12.0MiB/s] 48%|██████████████████▋                    | 160M/335M [00:21<00:21, 8.39MiB/s] 49%|███████████████████                    | 164M/335M [00:22<00:29, 6.00MiB/s] 50%|███████████████████▌                   | 168M/335M [00:23<00:33, 5.18MiB/s] 51%|███████████████████▊                   | 170M/335M [00:24<00:44, 3.92MiB/s] 53%|████████████████████▋                  | 177M/335M [00:24<00:24, 6.78MiB/s] 55%|█████████████████████▍                 | 184M/335M [00:25<00:15, 10.2MiB/s] 57%|██████████████████████                 | 190M/335M [00:25<00:11, 13.5MiB/s] 58%|██████████████████████▋                | 194M/335M [00:25<00:09, 16.3MiB/s] 61%|███████████████████████▋               | 204M/335M [00:25<00:05, 25.4MiB/s] 63%|████████████████████████▍              | 210M/335M [00:27<00:19, 6.89MiB/s] 65%|█████████████████████████▏             | 216M/335M [00:28<00:12, 9.69MiB/s] 67%|██████████████████████████▏            | 225M/335M [00:28<00:08, 14.3MiB/s] 69%|███████████████████████████            | 232M/335M [00:29<00:10, 10.2MiB/s] 71%|███████████████████████████▌           | 236M/335M [00:30<00:12, 8.24MiB/s] 72%|████████████████████████████           | 241M/335M [00:30<00:09, 10.4MiB/s] 74%|████████████████████████████▉          | 248M/335M [00:30<00:06, 14.7MiB/s] 77%|█████████████████████████████▉         | 257M/335M [00:30<00:03, 21.6MiB/s] 79%|██████████████████████████████▋        | 264M/335M [00:30<00:02, 26.7MiB/s] 81%|███████████████████████████████▍       | 270M/335M [00:30<00:02, 30.0MiB/s] 82%|████████████████████████████████       | 275M/335M [00:30<00:01, 34.4MiB/s] 85%|████████████████████████████████▉      | 283M/335M [00:31<00:01, 42.7MiB/s] 86%|█████████████████████████████████▋     | 289M/335M [00:31<00:01, 35.3MiB/s] 88%|██████████████████████████████████▌    | 296M/335M [00:32<00:02, 14.4MiB/s] 90%|██████████████████████████████████▉    | 300M/335M [00:34<00:04, 7.41MiB/s] 92%|███████████████████████████████████▋   | 307M/335M [00:34<00:02, 10.6MiB/s] 94%|████████████████████████████████████▌  | 314M/335M [00:34<00:01, 15.1MiB/s] 96%|█████████████████████████████████████▌ | 323M/335M [00:34<00:00, 21.6MiB/s] 98%|██████████████████████████████████████▎| 329M/335M [00:34<00:00, 26.4MiB/s]100%|███████████████████████████████████████| 335M/335M [00:34<00:00, 10.2MiB/s]
-Model loaded on cpu
-Loading prompts from enhanced_with_common_names_prompts_clean.json...
-Found 169 species
-Total prompts: 19141
-Encoding text prompts...
-Encoding prompts:   0%|          | 0/169 [00:00<?, ?it/s]Encoding prompts:   1%|          | 1/169 [00:04<12:30,  4.47s/it]Encoding prompts:   1%|          | 2/169 [00:10<15:25,  5.54s/it]Encoding prompts:   2%|▏         | 3/169 [00:16<15:16,  5.52s/it]Encoding prompts:   2%|▏         | 4/169 [00:21<14:40,  5.34s/it]Encoding prompts:   3%|▎         | 5/169 [00:27<15:39,  5.73s/it]Encoding prompts:   4%|▎         | 6/169 [00:33<15:57,  5.88s/it]Encoding prompts:   4%|▍         | 7/169 [00:39<15:33,  5.77s/it]Encoding prompts:   5%|▍         | 8/169 [00:46<16:17,  6.07s/it]Encoding prompts:   5%|▌         | 9/169 [00:53<17:25,  6.54s/it]Encoding prompts:   6%|▌         | 10/169 [01:01<18:15,  6.89s/it]Encoding prompts:   7%|▋         | 11/169 [01:07<17:11,  6.53s/it]Encoding prompts:   7%|▋         | 12/169 [01:14<17:44,  6.78s/it]Encoding prompts:   8%|▊         | 13/169 [01:22<18:34,  7.15s/it]Encoding prompts:   8%|▊         | 14/169 [01:28<17:38,  6.83s/it]Encoding prompts:   9%|▉         | 15/169 [01:34<16:34,  6.46s/it]Encoding prompts:   9%|▉         | 16/169 [01:39<15:41,  6.15s/it]Encoding prompts:  10%|█         | 17/169 [01:47<17:05,  6.74s/it]Encoding prompts:  11%|█         | 18/169 [01:54<17:08,  6.81s/it]Encoding prompts:  11%|█         | 19/169 [01:59<15:15,  6.11s/it]Encoding prompts:  12%|█▏        | 20/169 [02:04<14:49,  5.97s/it]Encoding prompts:  12%|█▏        | 21/169 [02:11<14:56,  6.06s/it]Encoding prompts:  13%|█▎        | 22/169 [02:22<18:44,  7.65s/it]Encoding prompts:  14%|█▎        | 23/169 [02:28<17:42,  7.28s/it]Encoding prompts:  14%|█▍        | 24/169 [02:36<17:54,  7.41s/it]Encoding prompts:  15%|█▍        | 25/169 [02:42<16:32,  6.89s/it]Encoding prompts:  15%|█▌        | 26/169 [02:48<15:59,  6.71s/it]Encoding prompts:  16%|█▌        | 27/169 [02:53<14:38,  6.19s/it]Encoding prompts:  17%|█▋        | 28/169 [02:59<14:24,  6.13s/it]Encoding prompts:  17%|█▋        | 29/169 [03:08<16:07,  6.91s/it]Encoding prompts:  18%|█▊        | 30/169 [03:12<13:56,  6.02s/it]Encoding prompts:  18%|█▊        | 31/169 [03:19<14:27,  6.29s/it]Encoding prompts:  19%|█▉        | 32/169 [03:24<13:31,  5.92s/it]Encoding prompts:  20%|█▉        | 33/169 [03:28<12:14,  5.40s/it]Encoding prompts:  20%|██        | 34/169 [03:34<12:57,  5.76s/it]Encoding prompts:  21%|██        | 35/169 [03:40<12:42,  5.69s/it]Encoding prompts:  21%|██▏       | 36/169 [03:44<11:36,  5.23s/it]Encoding prompts:  22%|██▏       | 37/169 [03:47<10:17,  4.67s/it]Encoding prompts:  22%|██▏       | 38/169 [03:53<10:26,  4.78s/it]Encoding prompts:  23%|██▎       | 39/169 [03:57<10:23,  4.80s/it]Encoding prompts:  24%|██▎       | 40/169 [04:02<10:07,  4.71s/it]Encoding prompts:  24%|██▍       | 41/169 [04:07<10:15,  4.81s/it]Encoding prompts:  25%|██▍       | 42/169 [04:13<11:14,  5.31s/it]Encoding prompts:  25%|██▌       | 43/169 [04:18<10:57,  5.22s/it]Encoding prompts:  26%|██▌       | 44/169 [04:27<13:05,  6.29s/it]Encoding prompts:  27%|██▋       | 45/169 [04:33<12:30,  6.05s/it]Encoding prompts:  27%|██▋       | 46/169 [04:37<11:33,  5.64s/it]Encoding prompts:  28%|██▊       | 47/169 [04:45<12:59,  6.39s/it]Encoding prompts:  28%|██▊       | 48/169 [04:51<12:27,  6.17s/it]Encoding prompts:  29%|██▉       | 49/169 [04:56<11:22,  5.69s/it]Encoding prompts:  30%|██▉       | 50/169 [05:02<11:42,  5.90s/it]Encoding prompts:  30%|███       | 51/169 [05:08<11:51,  6.03s/it]Encoding prompts:  31%|███       | 52/169 [05:13<10:50,  5.56s/it]Encoding prompts:  31%|███▏      | 53/169 [05:17<10:10,  5.27s/it]Encoding prompts:  32%|███▏      | 54/169 [05:24<10:59,  5.73s/it]Encoding prompts:  33%|███▎      | 55/169 [05:31<11:11,  5.89s/it]Encoding prompts:  33%|███▎      | 56/169 [05:36<10:49,  5.75s/it]Encoding prompts:  34%|███▎      | 57/169 [05:43<11:20,  6.08s/it]Encoding prompts:  34%|███▍      | 58/169 [05:48<10:34,  5.72s/it]Encoding prompts:  35%|███▍      | 59/169 [05:53<10:08,  5.54s/it]Encoding prompts:  36%|███▌      | 60/169 [06:00<10:57,  6.03s/it]Encoding prompts:  36%|███▌      | 61/169 [06:05<10:32,  5.86s/it]Encoding prompts:  37%|███▋      | 62/169 [06:10<09:57,  5.59s/it]Encoding prompts:  37%|███▋      | 63/169 [06:17<10:18,  5.83s/it]Encoding prompts:  38%|███▊      | 64/169 [06:24<10:56,  6.25s/it]Encoding prompts:  38%|███▊      | 65/169 [06:30<10:42,  6.17s/it]Encoding prompts:  39%|███▉      | 66/169 [06:36<10:44,  6.26s/it]Encoding prompts:  40%|███▉      | 67/169 [06:41<09:32,  5.62s/it]Encoding prompts:  40%|████      | 68/169 [06:46<09:12,  5.47s/it]Encoding prompts:  41%|████      | 69/169 [06:51<09:10,  5.51s/it]Encoding prompts:  41%|████▏     | 70/169 [06:56<08:42,  5.28s/it]Encoding prompts:  42%|████▏     | 71/169 [07:00<08:00,  4.90s/it]Encoding prompts:  43%|████▎     | 72/169 [07:06<08:27,  5.23s/it]Encoding prompts:  43%|████▎     | 73/169 [07:12<08:52,  5.54s/it]Encoding prompts:  44%|████▍     | 74/169 [07:17<08:34,  5.41s/it]Encoding prompts:  44%|████▍     | 75/169 [07:23<08:44,  5.58s/it]Encoding prompts:  45%|████▍     | 76/169 [07:30<08:53,  5.73s/it]Encoding prompts:  46%|████▌     | 77/169 [07:34<08:22,  5.46s/it]Encoding prompts:  46%|████▌     | 78/169 [07:39<08:04,  5.32s/it]Encoding prompts:  47%|████▋     | 79/169 [07:45<08:15,  5.50s/it]Encoding prompts:  47%|████▋     | 80/169 [07:51<08:05,  5.45s/it]Encoding prompts:  48%|████▊     | 81/169 [07:54<07:11,  4.91s/it]Encoding prompts:  49%|████▊     | 82/169 [08:01<07:50,  5.40s/it]Encoding prompts:  49%|████▉     | 83/169 [08:06<07:42,  5.38s/it]Encoding prompts:  50%|████▉     | 84/169 [08:10<06:59,  4.93s/it]Encoding prompts:  50%|█████     | 85/169 [08:16<07:21,  5.25s/it]Encoding prompts:  51%|█████     | 86/169 [08:22<07:41,  5.56s/it]Encoding prompts:  51%|█████▏    | 87/169 [08:27<07:04,  5.18s/it]Encoding prompts:  52%|█████▏    | 88/169 [08:36<08:51,  6.56s/it]Encoding prompts:  53%|█████▎    | 89/169 [08:42<08:11,  6.14s/it]Encoding prompts:  53%|█████▎    | 90/169 [08:46<07:31,  5.71s/it]Encoding prompts:  54%|█████▍    | 91/169 [08:53<07:42,  5.93s/it]Encoding prompts:  54%|█████▍    | 92/169 [08:59<07:41,  5.99s/it]Encoding prompts:  55%|█████▌    | 93/169 [09:04<07:23,  5.83s/it]Encoding prompts:  56%|█████▌    | 94/169 [09:11<07:35,  6.07s/it]Encoding prompts:  56%|█████▌    | 95/169 [09:17<07:23,  6.00s/it]Encoding prompts:  57%|█████▋    | 96/169 [09:21<06:43,  5.53s/it]Encoding prompts:  57%|█████▋    | 97/169 [09:28<07:01,  5.86s/it]Encoding prompts:  58%|█████▊    | 98/169 [09:34<06:59,  5.91s/it]Encoding prompts:  59%|█████▊    | 99/169 [09:42<07:43,  6.62s/it]Encoding prompts:  59%|█████▉    | 100/169 [09:47<07:08,  6.21s/it]Encoding prompts:  60%|█████▉    | 101/169 [09:52<06:20,  5.59s/it]Encoding prompts:  60%|██████    | 102/169 [09:56<05:56,  5.32s/it]Encoding prompts:  61%|██████    | 103/169 [10:03<06:24,  5.82s/it]Encoding prompts:  62%|██████▏   | 104/169 [10:09<06:12,  5.73s/it]Encoding prompts:  62%|██████▏   | 105/169 [10:15<06:12,  5.82s/it]Encoding prompts:  63%|██████▎   | 106/169 [10:21<06:08,  5.85s/it]Encoding prompts:  63%|██████▎   | 107/169 [10:25<05:40,  5.49s/it]Encoding prompts:  64%|██████▍   | 108/169 [10:30<05:18,  5.22s/it]Encoding prompts:  64%|██████▍   | 109/169 [10:37<05:44,  5.74s/it]Encoding prompts:  65%|██████▌   | 110/169 [10:42<05:21,  5.46s/it]Encoding prompts:  66%|██████▌   | 111/169 [10:47<05:06,  5.28s/it]Encoding prompts:  66%|██████▋   | 112/169 [10:55<05:54,  6.21s/it]Encoding prompts:  67%|██████▋   | 113/169 [10:59<05:15,  5.63s/it]Encoding prompts:  67%|██████▋   | 114/169 [11:03<04:41,  5.12s/it]Encoding prompts:  68%|██████▊   | 115/169 [11:10<05:00,  5.57s/it]Encoding prompts:  69%|██████▊   | 116/169 [11:14<04:41,  5.32s/it]Encoding prompts:  69%|██████▉   | 117/169 [11:20<04:35,  5.30s/it]Encoding prompts:  70%|██████▉   | 118/169 [11:26<04:46,  5.62s/it]Encoding prompts:  70%|███████   | 119/169 [11:31<04:29,  5.39s/it]Encoding prompts:  71%|███████   | 120/169 [11:35<04:06,  5.02s/it]Encoding prompts:  72%|███████▏  | 121/169 [11:41<04:17,  5.36s/it]Encoding prompts:  72%|███████▏  | 122/169 [11:47<04:22,  5.59s/it]Encoding prompts:  73%|███████▎  | 123/169 [11:52<04:01,  5.25s/it]Encoding prompts:  73%|███████▎  | 124/169 [12:00<04:38,  6.20s/it]Encoding prompts:  74%|███████▍  | 125/169 [12:05<04:15,  5.80s/it]Encoding prompts:  75%|███████▍  | 126/169 [12:09<03:49,  5.34s/it]Encoding prompts:  75%|███████▌  | 127/169 [12:15<03:50,  5.49s/it]Encoding prompts:  76%|███████▌  | 128/169 [12:22<03:56,  5.77s/it]Encoding prompts:  76%|███████▋  | 129/169 [12:26<03:38,  5.46s/it]Encoding prompts:  77%|███████▋  | 130/169 [12:32<03:36,  5.55s/it]Encoding prompts:  78%|███████▊  | 131/169 [12:39<03:45,  5.94s/it]Encoding prompts:  78%|███████▊  | 132/169 [12:47<04:01,  6.52s/it]Encoding prompts:  79%|███████▊  | 133/169 [12:53<03:53,  6.47s/it]Encoding prompts:  79%|███████▉  | 134/169 [13:03<04:16,  7.34s/it]Encoding prompts:  80%|███████▉  | 135/169 [13:08<03:49,  6.76s/it]Encoding prompts:  80%|████████  | 136/169 [13:15<03:49,  6.97s/it]Encoding prompts:  81%|████████  | 137/169 [13:21<03:25,  6.44s/it]Encoding prompts:  82%|████████▏ | 138/169 [13:25<03:03,  5.92s/it]Encoding prompts:  82%|████████▏ | 139/169 [13:33<03:09,  6.31s/it]Encoding prompts:  83%|████████▎ | 140/169 [13:37<02:49,  5.84s/it]Encoding prompts:  83%|████████▎ | 141/169 [13:42<02:34,  5.52s/it]Encoding prompts:  84%|████████▍ | 142/169 [13:49<02:38,  5.86s/it]Encoding prompts:  85%|████████▍ | 143/169 [13:54<02:27,  5.66s/it]Encoding prompts:  85%|████████▌ | 144/169 [13:59<02:15,  5.43s/it]Encoding prompts:  86%|████████▌ | 145/169 [14:06<02:21,  5.90s/it]Encoding prompts:  86%|████████▋ | 146/169 [14:11<02:11,  5.74s/it]Encoding prompts:  87%|████████▋ | 147/169 [14:16<02:00,  5.47s/it]Encoding prompts:  88%|████████▊ | 148/169 [14:23<02:04,  5.91s/it]Encoding prompts:  88%|████████▊ | 149/169 [14:28<01:54,  5.74s/it]Encoding prompts:  89%|████████▉ | 150/169 [14:33<01:41,  5.36s/it]Encoding prompts:  89%|████████▉ | 151/169 [14:40<01:43,  5.77s/it]Encoding prompts:  90%|████████▉ | 152/169 [14:44<01:30,  5.34s/it]Encoding prompts:  91%|█████████ | 153/169 [14:50<01:27,  5.49s/it]Encoding prompts:  91%|█████████ | 154/169 [14:56<01:27,  5.80s/it]Encoding prompts:  92%|█████████▏| 155/169 [15:02<01:21,  5.79s/it]Encoding prompts:  92%|█████████▏| 156/169 [15:07<01:13,  5.62s/it]Encoding prompts:  93%|█████████▎| 157/169 [15:14<01:12,  6.02s/it]Encoding prompts:  93%|█████████▎| 158/169 [15:20<01:06,  6.08s/it]Encoding prompts:  94%|█████████▍| 159/169 [15:26<00:58,  5.83s/it]Encoding prompts:  95%|█████████▍| 160/169 [15:32<00:55,  6.13s/it]Encoding prompts:  95%|█████████▌| 161/169 [15:37<00:44,  5.58s/it]Encoding prompts:  96%|█████████▌| 162/169 [15:42<00:38,  5.44s/it]Encoding prompts:  96%|█████████▋| 163/169 [15:49<00:34,  5.83s/it]Encoding prompts:  97%|█████████▋| 164/169 [15:54<00:28,  5.70s/it]Encoding prompts:  98%|█████████▊| 165/169 [15:59<00:21,  5.45s/it]Encoding prompts:  98%|█████████▊| 166/169 [16:04<00:16,  5.45s/it]Encoding prompts:  99%|█████████▉| 167/169 [16:10<00:10,  5.44s/it]Encoding prompts:  99%|█████████▉| 168/169 [16:12<00:04,  4.57s/it]Encoding prompts: 100%|██████████| 169/169 [16:19<00:00,  5.23s/it]Encoding prompts: 100%|██████████| 169/169 [16:19<00:00,  5.80s/it]
-Loading test data...
-Test samples: 500
-Evaluating with temperature=0.05...
-Testing:   0%|          | 0/16 [00:00<?, ?it/s]Testing:   0%|          | 0/16 [00:00<?, ?it/s]
-Traceback (most recent call last):
-  File "/zfs/ai4good/student/hgupta/eval_all_clip_models.py", line 195, in <module>
-    result = evaluate_clip_model(model_name, prompts_file, n_test_samples, temperature)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/eval_all_clip_models.py", line 103, in evaluate_clip_model
-    for images, labels, species_names in tqdm(test_loader, desc="Testing"):
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/tqdm/std.py", line 1181, in __iter__
-    for obj in iterable:
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 732, in __next__
-    data = self._next_data()
-           ^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 1506, in _next_data
-    return self._process_data(data, worker_id)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 1541, in _process_data
-    data.reraise()
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/_utils.py", line 769, in reraise
-    raise exception
-KeyError: Caught KeyError in DataLoader worker process 0.
-Original Traceback (most recent call last):
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/indexes/base.py", line 3812, in get_loc
-    return self._engine.get_loc(casted_key)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "pandas/_libs/index.pyx", line 167, in pandas._libs.index.IndexEngine.get_loc
-  File "pandas/_libs/index.pyx", line 196, in pandas._libs.index.IndexEngine.get_loc
-  File "pandas/_libs/hashtable_class_helper.pxi", line 7088, in pandas._libs.hashtable.PyObjectHashTable.get_item
-  File "pandas/_libs/hashtable_class_helper.pxi", line 7096, in pandas._libs.hashtable.PyObjectHashTable.get_item
-KeyError: 'path'
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/utils/data/_utils/worker.py", line 349, in _worker_loop
-    data = fetcher.fetch(index)  # type: ignore[possibly-undefined]
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/utils/data/_utils/fetch.py", line 52, in fetch
-    data = [self.dataset[idx] for idx in possibly_batched_index]
-            ~~~~~~~~~~~~^^^^^
-  File "/zfs/ai4good/student/hgupta/eval_all_clip_models.py", line 29, in __getitem__
-    img_path = os.path.join(self.data_dir, row['path'])
-                                           ~~~^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/series.py", line 1133, in __getitem__
-    return self._get_value(key)
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/series.py", line 1249, in _get_value
-    loc = self.index.get_loc(label)
-          ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/indexes/base.py", line 3819, in get_loc
-    raise KeyError(key) from err
-KeyError: 'path'
-
-ERROR evaluating ViT-B/16: Caught KeyError in DataLoader worker process 0.
-Original Traceback (most recent call last):
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/indexes/base.py", line 3812, in get_loc
-    return self._engine.get_loc(casted_key)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "pandas/_libs/index.pyx", line 167, in pandas._libs.index.IndexEngine.get_loc
-  File "pandas/_libs/index.pyx", line 196, in pandas._libs.index.IndexEngine.get_loc
-  File "pandas/_libs/hashtable_class_helper.pxi", line 7088, in pandas._libs.hashtable.PyObjectHashTable.get_item
-  File "pandas/_libs/hashtable_class_helper.pxi", line 7096, in pandas._libs.hashtable.PyObjectHashTable.get_item
-KeyError: 'path'
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/utils/data/_utils/worker.py", line 349, in _worker_loop
-    data = fetcher.fetch(index)  # type: ignore[possibly-undefined]
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/utils/data/_utils/fetch.py", line 52, in fetch
-    data = [self.dataset[idx] for idx in possibly_batched_index]
-            ~~~~~~~~~~~~^^^^^
-  File "/zfs/ai4good/student/hgupta/eval_all_clip_models.py", line 29, in __getitem__
-    img_path = os.path.join(self.data_dir, row['path'])
-                                           ~~~^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/series.py", line 1133, in __getitem__
-    return self._get_value(key)
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/series.py", line 1249, in _get_value
-    loc = self.index.get_loc(label)
-          ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/indexes/base.py", line 3819, in get_loc
-    raise KeyError(key) from err
-KeyError: 'path'
-
-
-######################################################################
-# Evaluating ViT-L/14
-######################################################################
-
-
-======================================================================
-Evaluating CLIP ViT-L/14
-======================================================================
-Loading CLIP ViT-L/14 model...
-  0%|                                               | 0.00/890M [00:00<?, ?iB/s]  1%|▍                                      | 10.4M/890M [00:00<00:08, 109MiB/s]  2%|▉                                      | 21.8M/890M [00:00<00:07, 115MiB/s]  4%|█▍                                     | 33.0M/890M [00:00<00:07, 116MiB/s]  5%|█▉                                     | 44.1M/890M [00:00<00:07, 113MiB/s]  6%|██▍                                    | 54.9M/890M [00:00<00:07, 113MiB/s]  7%|██▉                                    | 66.1M/890M [00:00<00:07, 114MiB/s]  9%|███▍                                   | 77.5M/890M [00:00<00:07, 115MiB/s] 10%|███▉                                   | 88.5M/890M [00:00<00:07, 113MiB/s] 11%|████▌                                   | 101M/890M [00:00<00:07, 117MiB/s] 13%|█████                                   | 112M/890M [00:01<00:07, 116MiB/s] 14%|█████▌                                  | 123M/890M [00:01<00:06, 116MiB/s] 15%|██████                                  | 135M/890M [00:01<00:06, 117MiB/s] 16%|██████▌                                 | 146M/890M [00:01<00:06, 116MiB/s] 18%|███████                                 | 157M/890M [00:01<00:06, 117MiB/s] 19%|███████▌                                | 168M/890M [00:01<00:06, 116MiB/s] 20%|████████                                | 180M/890M [00:01<00:06, 118MiB/s] 21%|████████▌                               | 191M/890M [00:01<00:06, 117MiB/s] 23%|█████████                               | 203M/890M [00:01<00:06, 118MiB/s] 24%|█████████▌                              | 214M/890M [00:01<00:06, 115MiB/s] 25%|██████████                              | 225M/890M [00:02<00:06, 116MiB/s] 27%|██████████▌                             | 236M/890M [00:02<00:05, 116MiB/s] 28%|███████████                             | 247M/890M [00:02<00:05, 115MiB/s] 29%|███████████▋                            | 259M/890M [00:02<00:05, 117MiB/s] 30%|████████████▏                           | 270M/890M [00:02<00:05, 117MiB/s] 32%|████████████▋                           | 281M/890M [00:02<00:05, 115MiB/s] 33%|█████████████▏                          | 292M/890M [00:02<00:05, 114MiB/s] 34%|█████████████▋                          | 303M/890M [00:02<00:05, 115MiB/s] 35%|██████████████▏                         | 314M/890M [00:02<00:05, 115MiB/s] 37%|██████████████▋                         | 325M/890M [00:02<00:05, 115MiB/s] 38%|███████████████▏                        | 337M/890M [00:03<00:04, 116MiB/s] 39%|███████████████▋                        | 348M/890M [00:03<00:04, 115MiB/s] 40%|████████████████▏                       | 359M/890M [00:03<00:04, 116MiB/s] 42%|████████████████▋                       | 370M/890M [00:03<00:04, 115MiB/s] 43%|█████████████████▏                      | 381M/890M [00:03<00:04, 113MiB/s] 44%|█████████████████▋                      | 392M/890M [00:03<00:04, 113MiB/s] 45%|██████████████████▏                     | 404M/890M [00:03<00:04, 115MiB/s] 47%|██████████████████▋                     | 415M/890M [00:03<00:04, 115MiB/s] 48%|███████████████████▏                    | 426M/890M [00:03<00:04, 115MiB/s] 49%|███████████████████▋                    | 438M/890M [00:03<00:04, 117MiB/s] 50%|████████████████████▏                   | 449M/890M [00:04<00:03, 117MiB/s] 52%|████████████████████▋                   | 460M/890M [00:04<00:03, 117MiB/s] 53%|█████████████████████▏                  | 471M/890M [00:04<00:03, 117MiB/s] 54%|█████████████████████▋                  | 482M/890M [00:04<00:03, 117MiB/s] 55%|██████████████████████▏                 | 494M/890M [00:04<00:03, 117MiB/s] 57%|██████████████████████▋                 | 505M/890M [00:04<00:03, 117MiB/s] 58%|███████████████████████▏                | 516M/890M [00:04<00:03, 111MiB/s] 59%|███████████████████████▊                | 529M/890M [00:04<00:03, 119MiB/s] 61%|████████████████████████▎               | 540M/890M [00:04<00:03, 117MiB/s] 62%|████████████████████████▊               | 551M/890M [00:04<00:03, 116MiB/s] 63%|█████████████████████████▎              | 563M/890M [00:05<00:02, 116MiB/s] 65%|█████████████████████████▊              | 574M/890M [00:05<00:02, 117MiB/s] 66%|██████████████████████████▎             | 585M/890M [00:05<00:02, 115MiB/s] 67%|██████████████████████████▊             | 597M/890M [00:05<00:02, 117MiB/s] 68%|███████████████████████████▎            | 608M/890M [00:05<00:02, 117MiB/s] 70%|███████████████████████████▊            | 619M/890M [00:05<00:02, 117MiB/s] 71%|████████████████████████████▎           | 631M/890M [00:05<00:02, 117MiB/s] 72%|████████████████████████████▊           | 642M/890M [00:05<00:02, 117MiB/s] 73%|█████████████████████████████▎          | 653M/890M [00:05<00:02, 117MiB/s] 75%|█████████████████████████████▊          | 664M/890M [00:06<00:02, 117MiB/s] 76%|██████████████████████████████▎         | 675M/890M [00:06<00:01, 116MiB/s] 77%|██████████████████████████████▉         | 687M/890M [00:06<00:01, 116MiB/s] 78%|███████████████████████████████▍        | 698M/890M [00:06<00:01, 116MiB/s] 80%|███████████████████████████████▉        | 709M/890M [00:06<00:01, 116MiB/s] 81%|████████████████████████████████▍       | 720M/890M [00:06<00:01, 117MiB/s] 82%|████████████████████████████████▉       | 732M/890M [00:06<00:01, 116MiB/s] 84%|█████████████████████████████████▍      | 743M/890M [00:06<00:01, 118MiB/s] 85%|█████████████████████████████████▉      | 754M/890M [00:06<00:01, 116MiB/s] 86%|██████████████████████████████████▍     | 766M/890M [00:06<00:01, 118MiB/s] 87%|██████████████████████████████████▉     | 777M/890M [00:07<00:00, 118MiB/s] 89%|███████████████████████████████████▍    | 789M/890M [00:07<00:00, 118MiB/s] 90%|███████████████████████████████████▉    | 800M/890M [00:07<00:00, 117MiB/s] 91%|████████████████████████████████████▍   | 811M/890M [00:07<00:00, 117MiB/s] 92%|████████████████████████████████████▉   | 822M/890M [00:07<00:00, 117MiB/s] 94%|█████████████████████████████████████▍  | 834M/890M [00:07<00:00, 117MiB/s] 95%|█████████████████████████████████████▉  | 845M/890M [00:07<00:00, 117MiB/s] 96%|██████████████████████████████████████▍ | 856M/890M [00:07<00:00, 117MiB/s] 97%|██████████████████████████████████████▉ | 867M/890M [00:07<00:00, 115MiB/s] 99%|███████████████████████████████████████▍| 878M/890M [00:07<00:00, 116MiB/s]100%|████████████████████████████████████████| 890M/890M [00:08<00:00, 116MiB/s]
-Model loaded on cpu
-Loading prompts from enhanced_with_common_names_prompts_clean.json...
-Found 169 species
-Total prompts: 19141
-Encoding text prompts...
-Encoding prompts:   0%|          | 0/169 [00:00<?, ?it/s]Encoding prompts:   1%|          | 1/169 [00:06<19:22,  6.92s/it]Encoding prompts:   1%|          | 2/169 [00:14<20:25,  7.34s/it]Encoding prompts:   2%|▏         | 3/169 [00:21<20:11,  7.30s/it]Encoding prompts:   2%|▏         | 4/169 [00:30<21:04,  7.67s/it]Encoding prompts:   3%|▎         | 5/169 [00:37<20:56,  7.66s/it]Encoding prompts:   4%|▎         | 6/169 [00:45<21:05,  7.77s/it]Encoding prompts:   4%|▍         | 7/169 [00:53<20:55,  7.75s/it]Encoding prompts:   5%|▍         | 8/169 [01:01<21:06,  7.86s/it]Encoding prompts:   5%|▌         | 9/169 [01:13<24:45,  9.29s/it]Encoding prompts:   6%|▌         | 10/169 [01:21<23:29,  8.87s/it]Encoding prompts:   7%|▋         | 11/169 [01:30<23:14,  8.83s/it]Encoding prompts:   7%|▋         | 12/169 [01:42<25:14,  9.64s/it]Encoding prompts:   8%|▊         | 13/169 [01:51<24:52,  9.57s/it]Encoding prompts:   8%|▊         | 14/169 [02:03<26:35, 10.29s/it]Encoding prompts:   9%|▉         | 15/169 [02:08<22:41,  8.84s/it]Encoding prompts:   9%|▉         | 16/169 [02:17<22:20,  8.76s/it]Encoding prompts:  10%|█         | 17/169 [02:29<24:28,  9.66s/it]Encoding prompts:  11%|█         | 18/169 [02:37<23:11,  9.22s/it]Encoding prompts:  11%|█         | 19/169 [02:43<20:58,  8.39s/it]Encoding prompts:  12%|█▏        | 20/169 [02:52<20:39,  8.32s/it]Encoding prompts:  12%|█▏        | 21/169 [02:58<19:11,  7.78s/it]Encoding prompts:  13%|█▎        | 22/169 [03:13<24:06,  9.84s/it]Encoding prompts:  14%|█▎        | 23/169 [03:21<22:53,  9.41s/it]Encoding prompts:  14%|█▍        | 24/169 [03:32<23:31,  9.73s/it]Encoding prompts:  15%|█▍        | 25/169 [03:40<22:08,  9.23s/it]Encoding prompts:  15%|█▌        | 26/169 [03:46<20:11,  8.48s/it]Encoding prompts:  16%|█▌        | 27/169 [03:54<19:47,  8.36s/it]Encoding prompts:  17%|█▋        | 28/169 [04:02<18:47,  8.00s/it]Encoding prompts:  17%|█▋        | 29/169 [04:14<21:32,  9.23s/it]Encoding prompts:  18%|█▊        | 30/169 [04:22<20:48,  8.98s/it]Encoding prompts:  18%|█▊        | 31/169 [04:30<19:36,  8.53s/it]Encoding prompts:  19%|█▉        | 32/169 [04:36<18:06,  7.93s/it]Encoding prompts:  20%|█▉        | 33/169 [04:44<17:49,  7.86s/it]Encoding prompts:  20%|██        | 34/169 [04:50<16:49,  7.47s/it]Encoding prompts:  21%|██        | 35/169 [04:59<17:20,  7.77s/it]Encoding prompts:  21%|██▏       | 36/169 [05:04<15:19,  6.91s/it]Encoding prompts:  22%|██▏       | 37/169 [05:12<16:01,  7.28s/it]Encoding prompts:  22%|██▏       | 38/169 [05:18<14:56,  6.85s/it]Encoding prompts:  23%|██▎       | 39/169 [05:25<14:52,  6.87s/it]Encoding prompts:  24%|██▎       | 40/169 [05:32<15:18,  7.12s/it]Encoding prompts:  24%|██▍       | 41/169 [05:39<14:46,  6.93s/it]Encoding prompts:  25%|██▍       | 42/169 [05:46<14:51,  7.02s/it]Encoding prompts:  25%|██▌       | 43/169 [05:53<14:21,  6.84s/it]Encoding prompts:  26%|██▌       | 44/169 [06:02<15:44,  7.55s/it]Encoding prompts:  27%|██▋       | 45/169 [06:10<16:05,  7.78s/it]Encoding prompts:  27%|██▋       | 46/169 [06:18<15:51,  7.73s/it]Encoding prompts:  28%|██▊       | 47/169 [06:26<16:02,  7.89s/it]Encoding prompts:  28%|██▊       | 48/169 [06:34<16:11,  8.02s/it]Encoding prompts:  29%|██▉       | 49/169 [06:42<15:40,  7.84s/it]Encoding prompts:  30%|██▉       | 50/169 [06:51<16:10,  8.16s/it]Encoding prompts:  30%|███       | 51/169 [06:57<15:09,  7.71s/it]Encoding prompts:  31%|███       | 52/169 [07:06<15:26,  7.92s/it]Encoding prompts:  31%|███▏      | 53/169 [07:11<13:58,  7.23s/it]Encoding prompts:  32%|███▏      | 54/169 [07:20<14:29,  7.56s/it]Encoding prompts:  33%|███▎      | 55/169 [07:28<14:49,  7.80s/it]Encoding prompts:  33%|███▎      | 56/169 [07:36<14:42,  7.81s/it]Encoding prompts:  34%|███▎      | 57/169 [07:43<14:22,  7.70s/it]Encoding prompts:  34%|███▍      | 58/169 [07:50<13:53,  7.51s/it]Encoding prompts:  35%|███▍      | 59/169 [07:58<13:46,  7.51s/it]Encoding prompts:  36%|███▌      | 60/169 [08:04<13:10,  7.25s/it]Encoding prompts:  36%|███▌      | 61/169 [08:13<13:55,  7.73s/it]Encoding prompts:  37%|███▋      | 62/169 [08:21<13:53,  7.79s/it]Encoding prompts:  37%|███▋      | 63/169 [08:29<13:52,  7.85s/it]Encoding prompts:  38%|███▊      | 64/169 [08:40<15:23,  8.80s/it]Encoding prompts:  38%|███▊      | 65/169 [08:48<14:55,  8.61s/it]Encoding prompts:  39%|███▉      | 66/169 [08:55<13:31,  7.88s/it]Encoding prompts:  40%|███▉      | 67/169 [09:02<13:12,  7.77s/it]Encoding prompts:  40%|████      | 68/169 [09:08<12:22,  7.35s/it]Encoding prompts:  41%|████      | 69/169 [09:17<12:40,  7.60s/it]Encoding prompts:  41%|████▏     | 70/169 [09:23<11:54,  7.22s/it]Encoding prompts:  42%|████▏     | 71/169 [09:30<11:56,  7.31s/it]Encoding prompts:  43%|████▎     | 72/169 [09:38<11:58,  7.40s/it]Encoding prompts:  43%|████▎     | 73/169 [09:46<11:59,  7.49s/it]Encoding prompts:  44%|████▍     | 74/169 [09:54<11:58,  7.57s/it]Encoding prompts:  44%|████▍     | 75/169 [10:01<11:48,  7.54s/it]Encoding prompts:  45%|████▍     | 76/169 [10:09<11:57,  7.71s/it]Encoding prompts:  46%|████▌     | 77/169 [10:15<11:07,  7.25s/it]Encoding prompts:  46%|████▌     | 78/169 [10:23<11:09,  7.36s/it]Encoding prompts:  47%|████▋     | 79/169 [10:29<10:28,  6.99s/it]Encoding prompts:  47%|████▋     | 80/169 [10:38<11:13,  7.56s/it]Encoding prompts:  48%|████▊     | 81/169 [10:44<10:35,  7.22s/it]Encoding prompts:  49%|████▊     | 82/169 [10:52<10:30,  7.24s/it]Encoding prompts:  49%|████▉     | 83/169 [10:59<10:19,  7.21s/it]Encoding prompts:  50%|████▉     | 84/169 [11:07<10:26,  7.36s/it]Encoding prompts:  50%|█████     | 85/169 [11:15<10:36,  7.58s/it]Encoding prompts:  51%|█████     | 86/169 [11:23<10:40,  7.72s/it]Encoding prompts:  51%|█████▏    | 87/169 [11:30<10:23,  7.60s/it]Encoding prompts:  52%|█████▏    | 88/169 [11:42<12:03,  8.93s/it]Encoding prompts:  53%|█████▎    | 89/169 [11:47<10:24,  7.81s/it]Encoding prompts:  53%|█████▎    | 90/169 [11:56<10:32,  8.00s/it]Encoding prompts:  54%|█████▍    | 91/169 [12:03<10:15,  7.89s/it]Encoding prompts:  54%|█████▍    | 92/169 [12:11<10:12,  7.96s/it]Encoding prompts:  55%|█████▌    | 93/169 [12:19<10:00,  7.90s/it]Encoding prompts:  56%|█████▌    | 94/169 [12:27<10:01,  8.02s/it]Encoding prompts:  56%|█████▌    | 95/169 [12:34<09:20,  7.57s/it]Encoding prompts:  57%|█████▋    | 96/169 [12:41<08:57,  7.36s/it]Encoding prompts:  57%|█████▋    | 97/169 [12:48<08:54,  7.42s/it]Encoding prompts:  58%|█████▊    | 98/169 [12:56<08:40,  7.33s/it]Encoding prompts:  59%|█████▊    | 99/169 [13:08<10:16,  8.80s/it]Encoding prompts:  59%|█████▉    | 100/169 [13:15<09:32,  8.30s/it]Encoding prompts:  60%|█████▉    | 101/169 [13:22<09:03,  8.00s/it]Encoding prompts:  60%|██████    | 102/169 [13:29<08:26,  7.56s/it]Encoding prompts:  61%|██████    | 103/169 [13:37<08:24,  7.65s/it]Encoding prompts:  62%|██████▏   | 104/169 [13:45<08:30,  7.86s/it]Encoding prompts:  62%|██████▏   | 105/169 [13:54<08:39,  8.11s/it]Encoding prompts:  63%|██████▎   | 106/169 [14:01<08:12,  7.81s/it]Encoding prompts:  63%|██████▎   | 107/169 [14:09<08:14,  7.98s/it]Encoding prompts:  64%|██████▍   | 108/169 [14:15<07:34,  7.46s/it]Encoding prompts:  64%|██████▍   | 109/169 [14:24<07:43,  7.73s/it]Encoding prompts:  65%|██████▌   | 110/169 [14:30<07:10,  7.30s/it]Encoding prompts:  66%|██████▌   | 111/169 [14:38<07:22,  7.62s/it]Encoding prompts:  66%|██████▋   | 112/169 [14:46<07:14,  7.61s/it]Encoding prompts:  67%|██████▋   | 113/169 [14:54<07:20,  7.86s/it]Encoding prompts:  67%|██████▋   | 114/169 [15:01<06:44,  7.36s/it]Encoding prompts:  68%|██████▊   | 115/169 [15:08<06:36,  7.35s/it]Encoding prompts:  69%|██████▊   | 116/169 [15:16<06:35,  7.47s/it]Encoding prompts:  69%|██████▉   | 117/169 [15:22<06:03,  6.98s/it]Encoding prompts:  70%|██████▉   | 118/169 [15:30<06:20,  7.45s/it]Encoding prompts:  70%|███████   | 119/169 [15:36<05:56,  7.13s/it]Encoding prompts:  71%|███████   | 120/169 [15:44<05:52,  7.20s/it]Encoding prompts:  72%|███████▏  | 121/169 [15:51<05:39,  7.07s/it]Encoding prompts:  72%|███████▏  | 122/169 [15:58<05:38,  7.20s/it]Encoding prompts:  73%|███████▎  | 123/169 [16:05<05:27,  7.12s/it]Encoding prompts:  73%|███████▎  | 124/169 [16:15<06:01,  8.03s/it]Encoding prompts:  74%|███████▍  | 125/169 [16:21<05:28,  7.46s/it]Encoding prompts:  75%|███████▍  | 126/169 [16:29<05:20,  7.44s/it]Encoding prompts:  75%|███████▌  | 127/169 [16:37<05:28,  7.82s/it]Encoding prompts:  76%|███████▌  | 128/169 [16:44<05:09,  7.55s/it]Encoding prompts:  76%|███████▋  | 129/169 [16:52<05:05,  7.64s/it]Encoding prompts:  77%|███████▋  | 130/169 [16:58<04:35,  7.06s/it]Encoding prompts:  78%|███████▊  | 131/169 [17:07<04:47,  7.57s/it]Encoding prompts:  78%|███████▊  | 132/169 [17:18<05:18,  8.62s/it]Encoding prompts:  79%|███████▊  | 133/169 [17:26<05:08,  8.58s/it]Encoding prompts:  79%|███████▉  | 134/169 [17:39<05:39,  9.70s/it]Encoding prompts:  80%|███████▉  | 135/169 [17:49<05:36,  9.89s/it]Encoding prompts:  80%|████████  | 136/169 [17:57<05:11,  9.45s/it]Encoding prompts:  81%|████████  | 137/169 [18:05<04:43,  8.85s/it]Encoding prompts:  82%|████████▏ | 138/169 [18:13<04:27,  8.64s/it]Encoding prompts:  82%|████████▏ | 139/169 [18:19<03:56,  7.87s/it]Encoding prompts:  83%|████████▎ | 140/169 [18:27<03:50,  7.96s/it]Encoding prompts:  83%|████████▎ | 141/169 [18:33<03:28,  7.45s/it]Encoding prompts:  84%|████████▍ | 142/169 [18:42<03:29,  7.78s/it]Encoding prompts:  85%|████████▍ | 143/169 [18:48<03:08,  7.23s/it]Encoding prompts:  85%|████████▌ | 144/169 [18:56<03:10,  7.61s/it]Encoding prompts:  86%|████████▌ | 145/169 [19:03<02:53,  7.24s/it]Encoding prompts:  86%|████████▋ | 146/169 [19:10<02:46,  7.26s/it]Encoding prompts:  87%|████████▋ | 147/169 [19:17<02:37,  7.18s/it]Encoding prompts:  88%|████████▊ | 148/169 [19:25<02:32,  7.26s/it]Encoding prompts:  88%|████████▊ | 149/169 [19:32<02:26,  7.32s/it]Encoding prompts:  89%|████████▉ | 150/169 [19:40<02:21,  7.44s/it]Encoding prompts:  89%|████████▉ | 151/169 [19:47<02:13,  7.41s/it]Encoding prompts:  90%|████████▉ | 152/169 [19:53<01:57,  6.92s/it]Encoding prompts:  91%|█████████ | 153/169 [20:03<02:06,  7.91s/it]Encoding prompts:  91%|█████████ | 154/169 [20:11<01:57,  7.84s/it]Encoding prompts:  92%|█████████▏| 155/169 [20:19<01:50,  7.92s/it]Encoding prompts:  92%|█████████▏| 156/169 [20:26<01:38,  7.61s/it]Encoding prompts:  93%|█████████▎| 157/169 [20:34<01:33,  7.82s/it]Encoding prompts:  93%|█████████▎| 158/169 [20:44<01:34,  8.57s/it]Encoding prompts:  94%|█████████▍| 159/169 [20:52<01:23,  8.35s/it]Encoding prompts:  95%|█████████▍| 160/169 [21:00<01:12,  8.05s/it]Encoding prompts:  95%|█████████▌| 161/169 [21:07<01:02,  7.84s/it]Encoding prompts:  96%|█████████▌| 162/169 [21:13<00:51,  7.41s/it]Encoding prompts:  96%|█████████▋| 163/169 [21:22<00:47,  7.95s/it]Encoding prompts:  97%|█████████▋| 164/169 [21:29<00:37,  7.54s/it]Encoding prompts:  98%|█████████▊| 165/169 [21:37<00:30,  7.68s/it]Encoding prompts:  98%|█████████▊| 166/169 [21:43<00:21,  7.16s/it]Encoding prompts:  99%|█████████▉| 167/169 [21:51<00:15,  7.54s/it]Encoding prompts:  99%|█████████▉| 168/169 [21:58<00:07,  7.14s/it]Encoding prompts: 100%|██████████| 169/169 [22:05<00:00,  7.20s/it]Encoding prompts: 100%|██████████| 169/169 [22:05<00:00,  7.84s/it]
-Loading test data...
-Test samples: 500
-Evaluating with temperature=0.05...
-Testing:   0%|          | 0/16 [00:00<?, ?it/s]Testing:   0%|          | 0/16 [00:00<?, ?it/s]
-Traceback (most recent call last):
-  File "/zfs/ai4good/student/hgupta/eval_all_clip_models.py", line 195, in <module>
-    result = evaluate_clip_model(model_name, prompts_file, n_test_samples, temperature)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/eval_all_clip_models.py", line 103, in evaluate_clip_model
-    for images, labels, species_names in tqdm(test_loader, desc="Testing"):
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/tqdm/std.py", line 1181, in __iter__
-    for obj in iterable:
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 732, in __next__
-    data = self._next_data()
-           ^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 1506, in _next_data
-    return self._process_data(data, worker_id)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 1541, in _process_data
-    data.reraise()
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/_utils.py", line 769, in reraise
-    raise exception
-KeyError: Caught KeyError in DataLoader worker process 0.
-Original Traceback (most recent call last):
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/indexes/base.py", line 3812, in get_loc
-    return self._engine.get_loc(casted_key)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "pandas/_libs/index.pyx", line 167, in pandas._libs.index.IndexEngine.get_loc
-  File "pandas/_libs/index.pyx", line 196, in pandas._libs.index.IndexEngine.get_loc
-  File "pandas/_libs/hashtable_class_helper.pxi", line 7088, in pandas._libs.hashtable.PyObjectHashTable.get_item
-  File "pandas/_libs/hashtable_class_helper.pxi", line 7096, in pandas._libs.hashtable.PyObjectHashTable.get_item
-KeyError: 'path'
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/utils/data/_utils/worker.py", line 349, in _worker_loop
-    data = fetcher.fetch(index)  # type: ignore[possibly-undefined]
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/utils/data/_utils/fetch.py", line 52, in fetch
-    data = [self.dataset[idx] for idx in possibly_batched_index]
-            ~~~~~~~~~~~~^^^^^
-  File "/zfs/ai4good/student/hgupta/eval_all_clip_models.py", line 29, in __getitem__
-    img_path = os.path.join(self.data_dir, row['path'])
-                                           ~~~^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/series.py", line 1133, in __getitem__
-    return self._get_value(key)
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/series.py", line 1249, in _get_value
-    loc = self.index.get_loc(label)
-          ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/indexes/base.py", line 3819, in get_loc
-    raise KeyError(key) from err
-KeyError: 'path'
-
-ERROR evaluating ViT-L/14: Caught KeyError in DataLoader worker process 0.
-Original Traceback (most recent call last):
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/indexes/base.py", line 3812, in get_loc
-    return self._engine.get_loc(casted_key)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "pandas/_libs/index.pyx", line 167, in pandas._libs.index.IndexEngine.get_loc
-  File "pandas/_libs/index.pyx", line 196, in pandas._libs.index.IndexEngine.get_loc
-  File "pandas/_libs/hashtable_class_helper.pxi", line 7088, in pandas._libs.hashtable.PyObjectHashTable.get_item
-  File "pandas/_libs/hashtable_class_helper.pxi", line 7096, in pandas._libs.hashtable.PyObjectHashTable.get_item
-KeyError: 'path'
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/utils/data/_utils/worker.py", line 349, in _worker_loop
-    data = fetcher.fetch(index)  # type: ignore[possibly-undefined]
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/torch/utils/data/_utils/fetch.py", line 52, in fetch
-    data = [self.dataset[idx] for idx in possibly_batched_index]
-            ~~~~~~~~~~~~^^^^^
-  File "/zfs/ai4good/student/hgupta/eval_all_clip_models.py", line 29, in __getitem__
-    img_path = os.path.join(self.data_dir, row['path'])
-                                           ~~~^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/series.py", line 1133, in __getitem__
-    return self._get_value(key)
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/series.py", line 1249, in _get_value
-    loc = self.index.get_loc(label)
-          ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/zfs/ai4good/student/hgupta/mushroom_env/lib/python3.12/site-packages/pandas/core/indexes/base.py", line 3819, in get_loc
-    raise KeyError(key) from err
-KeyError: 'path'
-
-
-======================================================================
-SUMMARY COMPARISON
-======================================================================
-Model                Top-1      Top-5      Balanced   Macro-F1  
-----------------------------------------------------------------------
-======================================================================
-
-All evaluations complete!

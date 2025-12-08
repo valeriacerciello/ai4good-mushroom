@@ -1,0 +1,90 @@
+# General
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+pip-wheel-metadata/
+
+# Virtualenvs and envs
+venv/
+env/
+.venv/
+.env/
+.mushroom_env/
+mushroom_env/
+venv.config
+
+# Byte-compiled / caches
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Logs and runtime files
+logs/
+*.log
+nohup.out
+
+clip_features/
+train.pt
+
+# Experiment outputs, checkpoints, plots
+experiment_results/
+experiment_results/splits/
+plots/
+plots/*
+experiment_results/ckpts/
+experiment_results/json/
+experiment_results/figs/
+ckpts/
+checkpoints/
+*.ckpt
+*.pth
+*.pt
+*.h5
+
+# Data: ignore raw/binary large files but keep small structured files like CSV/JSON
+data/*
+!data/*.json
+!data/*.csv
+!data/README*
+
+# Large archives
+*.tar
+*.tar.gz
+*.zip
+*.tgz
+
+# OS files
+Icon?
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Secrets and credentials
+.env.local
+.secrets
+.aws/
+
+# Optional: keep local test outputs out of git
+*.out
+
+# End of .gitignore

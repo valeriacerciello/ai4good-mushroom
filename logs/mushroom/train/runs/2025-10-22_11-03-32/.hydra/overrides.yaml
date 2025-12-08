@@ -1,7 +1,0 @@
-- experiment=mini
-- model=resnet18
-- logger=csv
-- trainer.max_epochs=1
-- data.mini=256
-- trainer.accelerator=cpu
-- trainer.precision=32
