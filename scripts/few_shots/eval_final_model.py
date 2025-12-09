@@ -47,21 +47,64 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 ###############################################################################
 
 def top1(pred, gt):
+    """
+    Compute top-1 accuracy.
+    
+    Args:
+        pred (np.ndarray): Predicted class labels, shape (n_samples,).
+        gt (np.ndarray): Ground truth class labels, shape (n_samples,).
+    
+    Returns:
+        float: Fraction of correct predictions (0.0 to 1.0).
+    """
     return float((pred == gt).mean())
 
 
 def top5(logits, gt):
+    """
+    Compute top-5 accuracy.
+    
+    Args:
+        logits (np.ndarray): Prediction logits/scores, shape (n_samples, n_classes).
+        gt (np.ndarray): Ground truth class labels, shape (n_samples,).
+    
+    Returns:
+        float: Fraction of samples where ground truth is in top-5 predictions (0.0 to 1.0).
+    """
     top5 = np.argsort(-logits, axis=1)[:, :5]
     return float((top5 == gt[:, None]).any(axis=1).mean())
 
 
 def balanced_acc(pred, gt, K):
+    """
+    Compute balanced accuracy (mean per-class recall).
+    
+    Provides fair evaluation for imbalanced datasets by averaging recall across classes.
+    
+    Args:
+        pred (np.ndarray): Predicted class labels, shape (n_samples,).
+        gt (np.ndarray): Ground truth class labels, shape (n_samples,).
+        K (int): Total number of classes.
+    
+    Returns:
+        float: Average per-class recall (0.0 to 1.0).
+    """
     cm = confusion_matrix(gt, pred, labels=list(range(K)))
     per_class = np.where(cm.sum(1) > 0, cm.diagonal() / cm.sum(1), 0)
     return float(per_class.mean())
 
 
 def macro_f1(pred, gt):
+    """
+    Compute macro-averaged F1 score (unweighted mean across classes).
+    
+    Args:
+        pred (np.ndarray): Predicted class labels, shape (n_samples,).
+        gt (np.ndarray): Ground truth class labels, shape (n_samples,).
+    
+    Returns:
+        float: Macro F1 score (0.0 to 1.0).
+    """
     return float(f1_score(gt, pred, average="macro"))
 
 
@@ -70,6 +113,29 @@ def macro_f1(pred, gt):
 ###############################################################################
 
 def load_final_model():
+    """
+    Load the trained final model and all necessary components for evaluation.
+    
+    Loads checkpoint saved by train_best_model.py and reconstructs:
+    - CLIP image encoder (frozen, on device)
+    - Linear classification head (on device)
+    - Text embeddings (cached)
+    - Per-class alpha values
+    - Model configuration metadata
+    
+    Handles image size normalization across different CLIP model variants.
+    
+    Returns:
+        Tuple: (clip_model, preprocess, linear_head, label_names, alpha_dict, text_embs, backbone, pretrained)
+            - clip_model: CLIP image encoder in eval mode
+            - preprocess: CLIP image preprocessing function
+            - linear_head: Trained linear classification head
+            - label_names: Ordered class label names (np.ndarray)
+            - alpha_dict: Per-class image-text mixing weights (dict)
+            - text_embs: Dictionary of text embeddings per label
+            - backbone: Model name (str)
+            - pretrained: Pretrained source (str)
+    """
     ckpt = torch.load(MODEL_PATH, map_location="cpu")
 
     label_names = ckpt["label_names"]
@@ -146,6 +212,22 @@ def load_final_model():
 ###############################################################################
 
 def mix_features(X, y, label_names, text_embs, alpha_dict):
+    """
+    Mix image embeddings with text embeddings using per-class alpha weights.
+    
+    For each class, blends image features with text embeddings using the class-specific alpha value,
+    then normalizes to unit norm. This reproduces the training-time feature mixing at test time.
+    
+    Args:
+        X (np.ndarray): Image embeddings, shape (n_samples, embedding_dim).
+        y (np.ndarray): Class labels, shape (n_samples,).
+        label_names (np.ndarray): Ordered array of class label names.
+        text_embs (Dict[str, Dict]): Text embeddings with "label_embedding" per label.
+        alpha_dict (Dict[str, float]): Per-class alpha values (default 0.5 if not found).
+    
+    Returns:
+        np.ndarray: Mixed and normalized features with same shape as input X.
+    """
     X_out = np.zeros_like(X)
 
     for k, lbl in enumerate(label_names):
@@ -153,7 +235,7 @@ def mix_features(X, y, label_names, text_embs, alpha_dict):
         if not np.any(inds):
             continue
 
-        α = alpha_dict.get(lbl, 0.5)
+        a = alpha_dict.get(lbl, 0.5)
         txt = text_embs[lbl]["label_embedding"]
 
         if isinstance(txt, torch.Tensor):
@@ -161,7 +243,7 @@ def mix_features(X, y, label_names, text_embs, alpha_dict):
 
         txt = txt / (np.linalg.norm(txt) + 1e-8)
 
-        mixed = α * X[inds] + (1 - α) * txt
+        mixed = a * X[inds] + (1 - a) * txt
         mixed /= np.linalg.norm(mixed, axis=1, keepdims=True)
 
         X_out[inds] = mixed
@@ -174,7 +256,20 @@ def mix_features(X, y, label_names, text_embs, alpha_dict):
 ###############################################################################
 
 def evaluate():
-
+    """
+    Evaluate the final trained model on validation and test sets.
+    
+    Complete evaluation pipeline:
+    1. Loads trained model and all components
+    2. Loads cached image features for val/test splits
+    3. Mixes features with text embeddings using per-class alpha
+    4. Computes linear probe predictions
+    5. Evaluates metrics: top1, top5, balanced accuracy, macro F1
+    6. Saves results to JSON file
+    
+    Results include separate metrics for validation and test sets.
+    Output saved to SAVE_JSON path.
+    """
     print("\n===== Loading final model =====")
     clip_model, preprocess, linear_head, label_names, alpha_dict, text_embs, backbone, pretrained = load_final_model()
     K = len(label_names)
