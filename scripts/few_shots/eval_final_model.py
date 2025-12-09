@@ -13,34 +13,7 @@ Datasets:
     - Test set
 """
 
-import os
-import json
-from pathlib import Path
-import numpy as np
-
-from sklearn.metrics import confusion_matrix, f1_score
-
-import torch
-import open_clip
-
-# Import from your hypertuning script
-from scripts.few_shots.hypertuning.few_shot_hyper_test import (
-    load_labels,
-    ensure_features,
-    get_text_embeddings,
-    DEFAULT_CACHE_DIR,
-    DATA_ROOT, TRAIN_CSV, VAL_CSV, TEST_CSV, LABELS,
-)
-
-###############################################################################
-# Paths
-###############################################################################
-
-MODEL_PATH = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/final_model_b32.pt"
-SAVE_JSON = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/final_model_eval_b32.json"
-
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
+from scripts.few_shots.import_n_config.eval_setup import *
 
 ###############################################################################
 # Metrics

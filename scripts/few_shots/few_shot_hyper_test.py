@@ -9,72 +9,6 @@ torch._dynamo.disable()
 torch._dynamo.config.suppress_errors = True
 # =================================================================
 
-"""
-Patched & parallelized version of test_few_shots_overall_patched.py
-
-Major changes:
-- Parallelized CPU-bound sweep operations using ThreadPoolExecutor while avoiding GPU oversubscription.
-- Added --cpu-probes flag to force small linear-probe trainings to run on CPU (default True) so that multiple sweeps can be parallelized across CPU cores while the GPU remains available for heavy encoding work.
-- Added safer max_workers handling: when device is 'cuda' we avoid parallel GPU-using tasks across workers.
-- Vectorized / batched evaluations where safe. Kept all sweep grids identical.
-- Minor DataLoader and caching tweaks retained, and torch.compile invocations preserved where available.
-
-Save as new file and run similarly to the original.
-"""
-
-import os
-import sys
-import argparse
-import json
-import hashlib
-import zipfile
-from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
-import csv
-import numpy as np
-import pandas as pd
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from PIL import Image
-import datetime
-import math
-import time
-
-import torch
-import torch.nn.functional as F
-from torch import nn
-from torch.utils.data import DataLoader, TensorDataset, Dataset
-from sklearn.metrics import f1_score, confusion_matrix
-
-# require open_clip
-try:
-    import open_clip
-except Exception as e:
-    raise ImportError("open_clip (open_clip_torch) is required. Install with: pip install open_clip_torch") from e
-
-# tqdm: use it only if available; we'll choose to enable bars only in TTY
-try:
-    from tqdm.auto import tqdm
-except Exception:
-    def tqdm(x, *args, **kwargs): return x
-
-# Limit CPU threads (avoid oversubscription on shared node)
-MAX_WORKERS = 64
-BATTCH_SIZE = 512
-
-# ---------- global environment & torch tuning (optimized) ----------
-# Limit CPU threads (avoid oversubscription on shared node)
-os.environ.setdefault("OMP_NUM_THREADS", "16")
-os.environ.setdefault("MKL_NUM_THREADS", "16")
-os.environ.setdefault("NUMEXPR_MAX_THREADS", "16")
-# Enable faster GPU memory allocator (if available)
-# TODO: replace PYTORCH_CUDA_ALLOC_CONF with PYTORCH_ALLOC_CONF
-os.environ.setdefault("PYTORCH_ALLOC_CONF", "max_split_size_mb:128")
-# Reduce torch.cudnn nondeterminism cost but keep performance heuristics
-torch.backends.cuda.matmul.allow_tf32 = True
-torch.backends.cudnn.benchmark = True
-# Set reasonable default threads
-torch.set_num_threads(int(os.environ.get("OMP_NUM_THREADS", "16")))
-
 # TorchDynamo/compiler behavior:
 # - Dynamo can cause many costly recompiles when global state (grad_mode, device) changes.
 # - For long-running sweeping/eval jobs it's frequently faster to disable it.
@@ -90,44 +24,13 @@ except Exception:
     # If torch._dynamo is missing or errors, continue without failing
     pass
 
-# Helpful debug env flags (uncomment if you want recompilation diagnostics)
-# os.environ.setdefault("TORCH_LOGS", "recompiles")
+"""
+Giant Hyperparameter sweep of open CLIP few shots with prompts
+"""
+
+from scripts.few_shots.import_n_config.hyper_setup import *
 
 
-
-# ---------- globals ----------
-torch.set_float32_matmul_precision('high')
-
-DEFAULT_PRETRAINED = {
-    "PE-Core-bigG-14-448": "meta",
-    "ViT-gopt-16-SigLIP2-384": "webli",
-    "ViT-H-14-378-quickgelu": "dfn5b",
-    "ViT-B-32-quickgelu": "openai",
-    "ViT-L-14": "openai",
-    "ViT-B-16": "openai",
-}
-SHOTS = [0, 1, 5, 10, 20, 50, 100]
-ALPHAS = [0.0,0.2,0.4,0.6,0.8,1.0]
-TEMP_GRID = [1] #,5,10,20,50,100]
-PROMPT_SET = ["ensemble", "v1", "names", "delta"]
-LR_GRID = [1e-3, 3e-3, 3e-2, 3e-1]
-WD_GRID = [0,1e-4,5e-4]
-MIX_STRATEGIES = ["none"]# ["normalize","none"]
-
-WORK_ENV = "/home/c/dkorot/AI4GOOD"
-DATA_ROOT = WORK_ENV + "/provided_dir/datasets/mushroom/merged_dataset"
-TRAIN_CSV = WORK_ENV + "/ai4good-mushroom/splits/train.csv"
-VAL_CSV = WORK_ENV + "/ai4good-mushroom/splits/val.csv"
-TEST_CSV = WORK_ENV + "/ai4good-mushroom/splits/test.csv"
-LABELS = WORK_ENV + "/ai4good-mushroom/data_prompts_label/labels.tsv"
-RESULTS_DIR = WORK_ENV + "/ai4good-mushroom/results"
-DEFAULT_CACHE_DIR = "/zfs/ai4good/student/dkorot/ai4good-mushroom/features"
-DEFAULT_PROMPTS_JSON = WORK_ENV + "/ai4good-mushroom/data_prompts_label/delta_prompts.json"
-
-DEFAULT_TEXT_CACHE_DIR = Path(".cache_text_embeddings")
-DEFAULT_TEXT_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-
-# ------------------------------
 # Prompt templates & clip_utils-like functions
 # ------------------------------
 SHORT_PROMPTS = [
@@ -565,11 +468,9 @@ def make_record(
     shot,
     model,
     alpha,
-    temp,
     prompt_set,
     lr,
     weight_decay,
-    mix_strategy,
     split_name,
     backbone,
     y_true,
@@ -588,11 +489,9 @@ def make_record(
         shot (int): Number of few-shot samples used.
         model (str): Model type ("prototype", "linear+prompts", "zero-shot").
         alpha (float): Prompt mixing weight (0=image only, 1=text only).
-        temp (float): Temperature scaling for logits.
         prompt_set (str): Type of prompt set used.
         lr (float): Learning rate (if linear probe).
         weight_decay (float): Weight decay (if linear probe).
-        mix_strategy (str): Feature mixing strategy ("normalize" or "none").
         split_name (str): Dataset split ("train", "val", "test").
         backbone (str): CLIP model backbone name.
         y_true (np.ndarray): True labels.
@@ -614,11 +513,9 @@ def make_record(
     "shot": shot,
     "model": model,    # e.g. "prototype" or "linear"
     "alpha": alpha,
-    "temp": temp,
     "prompt_set": prompt_set,
     "lr": lr,
     "weight_decay": weight_decay,
-    "mix_strategy": mix_strategy,
     "split": split_name,
     "backbone": backbone,
     "top1": float(top1),
@@ -658,7 +555,7 @@ def prototype_classifier(X_support: np.ndarray, y_support: np.ndarray, K: int) -
 
 def prototype_classifier_with_prompts(X_support: np.ndarray, y_support: np.ndarray, K: int,
                                       label_names: List[str], text_embs: Dict[str, Any],
-                                      alpha: float = 0.5, mix_strategy: str = 'normalize') -> np.ndarray:
+                                      alpha: float = 0.5) -> np.ndarray:
     """
     Build prototypes by mixing image support embeddings with text embeddings.
     
@@ -669,7 +566,6 @@ def prototype_classifier_with_prompts(X_support: np.ndarray, y_support: np.ndarr
         label_names (List[str]): Ordered list of class label names.
         text_embs (Dict[str, Any]): Text embeddings dict with "label_embedding" for each label.
         alpha (float): Mixing weight between image and text features (0=image only, 1=text only).
-        mix_strategy (str): Mixing strategy - "normalize" or "none".
     
     Returns:
         np.ndarray: Mixed prototype vectors, shape (K, embedding_dim).
@@ -700,10 +596,6 @@ def prototype_classifier_with_prompts(X_support: np.ndarray, y_support: np.ndarr
                 txt_proto = txt_proto / n
 
         combined = alpha * img_proto + (1.0 - alpha) * txt_proto
-        if mix_strategy == 'normalize':
-            n = np.linalg.norm(combined)
-            if n > 0:
-                combined = combined / n
         prototypes[k] = combined
     return prototypes
 
@@ -1168,7 +1060,7 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
         args (argparse.Namespace): Configuration object with fields:
             - data_root, train/val/test csv paths, labels tsv
             - device, save_dir, results_dir
-            - shots, alpha_grid, temp_grid, lr_grid, wd_grid
+            - shots, alpha_grid, lr_grid, wd_grid
             - prompt_sets, use_prompts_for_prototype, use_prompts_for_linear
             - cpu_probes, max_workers, epochs, batch_size, seed
         label_names (List[str]): Ordered list of class names.
@@ -1253,7 +1145,7 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
             print(f"[{backbone}] zero-shot evaluation on {split_name}...")
             scores_zs = X_gpu @ torch.from_numpy(text_embeddings).float().to(device)
             yhat = torch.argmax(scores_zs, dim=1).cpu().numpy()
-            records = make_record(records, 0, "zero-shot", 0.0, 0.0, "none", 0.0, 0.0, "none", split_name, backbone, y, yhat, scores_zs.cpu().numpy(), label_names)
+            records = make_record(records, 0, "zero-shot", 0.0, 0.0, 0.0, "none", split_name, backbone, y, yhat, scores_zs.cpu().numpy(), label_names)
 
     shot_list = sorted([s for s in args.shots if s > 0])
     shot_iter = shot_list
@@ -1289,14 +1181,14 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
             with ThreadPoolExecutor(max_workers=max_workers) as ex:
                 futures = []
                 future_to_job = {}
-                for (prompt_set, mix_strategy, temp, text_embs_for_set, X_sup_loc, y_sup_loc) in prototype_tasks:
+                for (prompt_set, text_embs_for_set, X_sup_loc, y_sup_loc) in prototype_tasks:
                     # For each alpha, spawn tasks for all alphas (alpha loop is independent)
                     for alpha in args.alpha_grid:
-                        job_desc = f"prototype+prompts shot={shot} prompt_set={prompt_set} alpha={alpha} mix={mix_strategy} temp={temp}"
+                        job_desc = f"prototype+prompts shot={shot} prompt_set={prompt_set} alpha={alpha}"
                         _log(f"[{backbone}] SUBMIT {job_desc}")
                         fut = ex.submit(_eval_prototype_alpha,
                                          X_sup_loc, y_sup_loc, K,
-                                         list(label_names), text_embs_for_set, alpha, mix_strategy, temp,
+                                         list(label_names), text_embs_for_set, alpha,
                                          X_vl_gpu, y_vl, X_te_gpu, y_te, backbone, shot, prompt_set)
                         futures.append(fut)
                         future_to_job[fut] = job_desc
@@ -1350,7 +1242,6 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
                                     probe_device,
                                     args.seed + int(shot),
                                     args.no_compile,
-                                    args.temp_grid,
                                     backbone,
                                     shot,
                                     prompt_set,
@@ -1376,7 +1267,7 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
                                     X_sup, y_sup, X_vl, y_vl,
                                         X_te, y_te, list(label_names), text_embs_for_set, K,
                                     alpha, args.epochs, lr, args.batch_size, probe_device,
-                                    args.seed + int(shot), args.no_compile, args.temp_grid, backbone, shot, prompt_set, wd)
+                                    args.seed + int(shot), args.no_compile, backbone, shot, prompt_set, wd)
                                 _log(f"[{backbone}] DONE {job_desc} -> {len(recs)} records")
                                 records.extend(recs)
                             except Exception as e:
@@ -1385,10 +1276,10 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
     return records
 
 
-def _eval_prototype_alpha(X_sup, y_sup, K, label_names, text_embs_for_set, alpha, mix_strategy, temp,
+def _eval_prototype_alpha(X_sup, y_sup, K, label_names, text_embs_for_set, alpha,
                           X_vl_gpu, y_vl, X_te_gpu, y_te, backbone, shot, prompt_set):
     """
-    Evaluate a single (alpha, mix_strategy, temp) configuration for prototype+prompts classifier.
+    Evaluate a single alpha for prototype+prompts classifier.
     
     Thread-safe function designed to run inside ThreadPoolExecutor. Computes prototypes by mixing
     image and text embeddings, then evaluates on validation and test sets.
@@ -1400,8 +1291,6 @@ def _eval_prototype_alpha(X_sup, y_sup, K, label_names, text_embs_for_set, alpha
         label_names (List[str]): Class label names.
         text_embs_for_set (Dict): Text embeddings for the current prompt set.
         alpha (float): Image-text mixing weight.
-        mix_strategy (str): Feature mixing strategy ("normalize" or "none").
-        temp (float): Temperature scaling for similarity scores.
         X_vl_gpu (torch.Tensor): Validation features on device.
         y_vl (np.ndarray): Validation labels.
         X_te_gpu (torch.Tensor): Test features on device.
@@ -1423,7 +1312,7 @@ def _eval_prototype_alpha(X_sup, y_sup, K, label_names, text_embs_for_set, alpha
             X_sup_np = np.array(X_sup, dtype=np.float32)
 
         # Build prototypes (numpy)
-        prototypes_prompts = prototype_classifier_with_prompts(X_sup_np, y_sup, K, label_names, text_embs_for_set, alpha=alpha, mix_strategy=mix_strategy)
+        prototypes_prompts = prototype_classifier_with_prompts(X_sup_np, y_sup, K, label_names, text_embs_for_set, alpha=alpha)
         # prototypes_prompts is numpy (function returns numpy) -> convert to float32
         prot_cpu = torch.from_numpy(prototypes_prompts.astype(np.float32))
 
@@ -1433,9 +1322,9 @@ def _eval_prototype_alpha(X_sup, y_sup, K, label_names, text_embs_for_set, alpha
         # Evaluate on val/test using the pre-moved X_vl_gpu / X_te_gpu
         for split_name, X_gpu, y in [("val", X_vl_gpu, y_vl), ("test", X_te_gpu, y_te)]:
             # similarity and scaling
-            scores = (X_gpu @ prot_on_device.T) * float(temp)
+            scores = X_gpu @ prot_on_device.T
             yhat = torch.argmax(scores, axis=1).cpu().numpy()
-            recs = make_record(recs, shot, f"prototype+prompts", alpha, float(temp), prompt_set, 0.0, 0.0, mix_strategy, split_name, backbone, y, yhat, scores.cpu().numpy(), label_names)
+            recs = make_record(recs, shot, f"prototype+prompts", alpha, prompt_set, 0.0, 0.0, split_name, backbone, y, yhat, scores.cpu().numpy(), label_names)
     except Exception as e:
         print(f"[warn] prototype alpha eval failed: {e}")
     return recs
@@ -1448,13 +1337,13 @@ def _train_and_eval_linear_probe_with_prompts(
     X_te, y_te,
     label_names, text_embs_for_set, K,
     alpha, epochs, lr, batch_size, device, seed, compile_flag,
-    temp_grid, backbone, shot, prompt_set, weight_decay
+    backbone, shot, prompt_set, weight_decay
 ):
     """
-    Train a linear probe with text-augmented features and evaluate across temperature grid.
+    Train a linear probe with text-augmented features.
     
     Thread-safe function for parallel execution. Trains a linear probe on mixed image+text features,
-    then evaluates on validation/test with temperature scaling applied to logits.
+    then evaluates on validation/test with scaling applied to logits.
     
     Args:
         X_sup, y_sup: Support set embeddings and labels.
@@ -1470,14 +1359,13 @@ def _train_and_eval_linear_probe_with_prompts(
         device (str): Training device.
         seed (int): Random seed.
         compile_flag (bool): Whether to use torch.compile.
-        temp_grid (List[float]): Temperature values to evaluate.
         backbone (str): Model name for logging.
         shot (int): Few-shot count for logging.
         prompt_set (str): Prompt set name for logging.
         weight_decay (float): Weight decay for optimizer.
     
     Returns:
-        List[Dict]: Evaluation result records for each temperature.
+        List[Dict]: Evaluation result records for logits.
     """
     recs = []
     try:
@@ -1512,29 +1400,24 @@ def _train_and_eval_linear_probe_with_prompts(
                 y_true = y_arr.cpu().numpy()
             else:
                 y_true = np.asarray(y_arr)
+            yhat = logits_np.argmax(axis=1)
 
-            # ---- Temperature sweep ----
-            for temp in temp_grid:
-                logits_tp = logits_np * float(temp)
-                yhat = logits_tp.argmax(axis=1)
-
-                recs = make_record(
-                    recs,
-                    shot,
-                    "linear+prompts",
-                    alpha,
-                    temp,
-                    prompt_set,
-                    lr,
-                    weight_decay,
-                    "none",
-                    split_name,
-                    backbone,
-                    y_true,
-                    yhat,
-                    logits_tp,
-                    label_names
-                )
+            recs = make_record(
+                recs,
+                shot,
+                "linear+prompts",
+                alpha,
+                prompt_set,
+                lr,
+                weight_decay,
+                "none",
+                split_name,
+                backbone,
+                y_true,
+                yhat,
+                logits_np,
+                label_names
+            )
 
         _log(f"[{backbone}] FINISH linear+prompts shot={shot} prompt_set={prompt_set} alpha={alpha} lr={lr} wd={weight_decay} -> {len(recs)} records")
 
@@ -1750,7 +1633,7 @@ def parse_args():
         argparse.Namespace: Configuration object with fields for:
             - Data paths (data_root, train/val/test CSVs, labels TSV)
             - Model options (backbones, pretrained weights)
-            - Few-shot parameters (shots, alpha_grid, temp_grid, LR/WD grids)
+            - Few-shot parameters (shots, alpha_grid, LR/WD grids)
             - Prompt sets and mixing strategies
             - Training options (epochs, batch size, device, CPU probes flag)
             - Output directories (save_dir, results_dir)
@@ -1771,7 +1654,7 @@ def parse_args():
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--epochs", type=int, default=100)
-    ap.add_argument("--batch-size", type=int, default=BATTCH_SIZE)
+    ap.add_argument("--batch-size", type=int, default=BATCH_SIZE)
     ap.add_argument("--direct-eval", action="store_true", help="Run direct prompt-based evaluation (encodes images on the fly).")
     ap.add_argument("--num-samples", type=int, default=None, help="If using direct-eval, optionally subsample test set.")
     ap.add_argument("--temp", type=float, default=0.12, help="Temp for prompt pooling softmax")
@@ -1782,11 +1665,9 @@ def parse_args():
     ap.add_argument("--no-prompts-for-prototype", action="store_true", help="Disable text-prompt fusion for prototypes")
     ap.add_argument("--no-prompts-for-linear", action="store_true", help="Disable text-prompt pseudo-examples for linear probe")
     ap.add_argument("--alpha-grid", default=ALPHAS, help="Comma-separated list of prompt-alpha values to sweep over")
-    ap.add_argument("--temp-grid", default=TEMP_GRID, help="Comma-separated list of temperatures for logit scaling")
     ap.add_argument("--prompt-sets", default=PROMPT_SET, help="Comma-separated prompt sets to sweep")
     ap.add_argument("--lr-grid", default=LR_GRID, help="Comma-separated learning rates for linear probe")
     ap.add_argument("--wd-grid", default=WD_GRID, help="Comma-separated weight decay values for linear probe")
-    ap.add_argument("--mix-strategies", default=MIX_STRATEGIES, help="Comma-separated mixing strategies: normalize,none")
     ap.add_argument("--fast", action="store_true", help="Use fast defaults (few epochs, single worker, small hyper grids)")
 
     args = ap.parse_args()
@@ -1801,23 +1682,18 @@ def parse_args():
         args.lr_grid = [1e-3]
         args.wd_grid = [0.0]
         args.alpha_grid = [0.5]
-        args.temp_grid = [1.0]
         # reduce prompt sets to one
         args.prompt_sets = ["ensemble"]
 
     # Ensure lists (argparse sometimes gives string)
     if isinstance(args.alpha_grid, str):
         args.alpha_grid = [float(x) for x in args.alpha_grid.split(",")]
-    if isinstance(args.temp_grid, str):
-        args.temp_grid = [float(x) for x in args.temp_grid.split(",")]
     if isinstance(args.lr_grid, str):
         args.lr_grid = [float(x) for x in args.lr_grid.split(",")]
     if isinstance(args.wd_grid, str):
         args.wd_grid = [float(x) for x in args.wd_grid.split(",")]
     if isinstance(args.prompt_sets, str):
         args.prompt_sets = args.prompt_sets.split(",")
-    if isinstance(args.mix_strategies, str):
-        args.mix_strategies = args.mix_strategies.split(",")
 
     # Make sure max_workers reasonable
     args.max_workers = max(1, int(min(args.max_workers, (os.cpu_count() or 4))))
@@ -1870,7 +1746,6 @@ def main():
                 model_name=backbone,
                 device=args.device,
                 num_samples=args.num_samples,
-                temp=args.temp,
                 delta_prompts_path=args.prompts_path,
                 pretrained=args.pretrained.get(backbone, "openai"),
                 random_state=args.seed,
@@ -1891,31 +1766,10 @@ def main():
             recs = evaluate_backbone(backbone, args, list(label_names), K, show_progress=show_progress)
             records_all.extend(recs)
 
-        out_overall_results = Path(args.results_dir) / "few_shot_table_all_backbones.csv"
-        out_class_results = Path(args.results_dir) / "few_shot_table_all_backbones.csv"
-        # with open(out_csv, "w", newline="", encoding="utf-8") as f:
-        #     w = csv.writer(f)
-        #     w.writerow([
-        #         "shot", "model", "alpha", "temp", "prompt_set",
-        #         "lr", "weight_decay", "mix_strategy",
-        #         "split", "backbone",
-        #         "top1", "top5", "balanced_acc", "macro_f1"
-        #     ])
-        #     for r in records_all:
-        #         w.writerow(r)
-        # print(f"Wrote results -> {out_csv}")
-
-        # --- NEW: Save overall results as JSON ---
         out_json = Path(args.results_dir) / "few_shot_overall_results.json"
         with open(out_json, "w", encoding="utf-8") as jf:
             json.dump(records_all, jf, indent=2)
         print(f"Wrote overall results -> {out_json}")
-
-        # # --- NEW: Save per-class results (already included inside each dict) ---
-        # out_json_pc = Path(args.results_dir) / "few_shot_per_class_results.json"
-        # with open(out_json_pc, "w", encoding="utf-8") as jf:
-        #     json.dump(records_all, jf, indent=2)
-        # print(f"Wrote per-class results -> {out_json_pc}")
 
 
 if __name__ == "__main__":

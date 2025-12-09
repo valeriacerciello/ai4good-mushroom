@@ -18,49 +18,7 @@ This script:
 Place in: ai4good-mushroom/train_best_model.py
 """
 
-import os
-import json
-import argparse
-from pathlib import Path
-import numpy as np
-import torch
-from torch import nn
-from PIL import Image
-
-# Import needed components from your sweep file
-from scripts.few_shots.hypertuning.few_shot_hyper_test import (
-    ensure_features,
-    load_labels,
-    get_text_embeddings,
-    train_linear_probe,
-    encode_images,
-    DEFAULT_CACHE_DIR,
-    DATA_ROOT, TRAIN_CSV, VAL_CSV, TEST_CSV, LABELS,
-)
-import open_clip
-
-###############################################################################
-#                          FINAL BEST PARAMETERS
-###############################################################################
-
-# FINAL_BACKBONE = "PE-Core-bigG-14-448"
-# FINAL_PRETRAINED = "meta"
-FINAL_BACKBONE = "ViT-B-32-quickgelu"
-FINAL_PRETRAINED = "openai"
-
-FINAL_MODEL_TYPE = "linear+prompts"
-FINAL_SHOTS = 100
-FINAL_PROMPT_SET = "delta"
-
-FINAL_LR = 0.03
-FINAL_WD = 0.0000
-FINAL_EPOCHS = 200
-FINAL_BATCH_SIZE = 512
-
-BEST_ALPHA_PATH = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/results/best_alpha_b32.json"
-SAVE_PATH = "/home/c/dkorot/AI4GOOD/ai4good-mushroom/final_model_b32.pt"
-
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+from scripts.few_shots.import_n_config.train_setup import *
 
 ###############################################################################
 #                          Utility Functions
