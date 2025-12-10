@@ -40,7 +40,7 @@ python eval_zero_shot.py \
 ```
 
 ## 4. Few-Shot Evaluation (simple)
-Adjust the input and out directories inside the files.
+Note to user: adjust the input and output directories inside the files.
 
 ### Hyperparameter Sweeps
 

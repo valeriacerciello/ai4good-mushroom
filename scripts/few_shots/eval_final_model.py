@@ -164,6 +164,8 @@ def load_final_model():
 
     linear_head.load_state_dict(fixed_state)
     linear_head.eval()
+    
+    
 
 
     # Load cached text embeddings
@@ -177,7 +179,6 @@ def load_final_model():
     )
 
     return clip_model, preprocess, linear_head, label_names, alpha_dict, text_embs, backbone, pretrained
-
 
 
 ###############################################################################
@@ -310,8 +311,90 @@ def evaluate():
 
 
 ###############################################################################
+# Inference Pipeline
+###############################################################################
+
+def predict(image_path):
+    """
+    Run inference on a single image and return predicted mushroom class.
+    
+    Combines CLIP image encoding with per-class text embeddings using learned alpha values.
+    Predicts the class with highest logit from the linear head.
+    
+    Args:
+        image_path (str): Path to image file to classify.
+    
+    Returns:
+        str: Predicted mushroom class label.
+    """
+    clip_model, preprocess, linear_head, label_names, alpha_dict, text_embs, _, _ = load_final_model()
+
+    image = Image.open(image_path).convert("RGB")
+    image_tensor = preprocess(image).unsqueeze(0).to(DEVICE)
+
+    with torch.no_grad():
+        img_feat = clip_model.encode_image(image_tensor)
+        img_feat = img_feat / img_feat.norm(dim=-1, keepdim=True)
+
+    # Build class-mixed features (image + text with alpha)
+    mixed_feats = []
+    for lbl in label_names:
+        a = alpha_dict.get(lbl, 0.5)
+        txt = text_embs[lbl]["label_embedding"]
+        if isinstance(txt, torch.Tensor):
+            txt = txt.to(DEVICE)
+        else:
+            txt = torch.from_numpy(txt).to(DEVICE)
+        txt = txt / txt.norm()
+
+        mixed = a * img_feat + (1 - a) * txt
+        mixed = mixed / mixed.norm(dim=-1, keepdim=True)
+        mixed_feats.append(mixed)
+
+    mixed_feats = torch.cat(mixed_feats, dim=0).unsqueeze(0)  # [1, K, dim]
+
+    with torch.no_grad():
+        logits = linear_head(mixed_feats.squeeze(0))
+        pred = logits.argmax().item()
+
+    return label_names[pred]
+
+
+###############################################################################
 # Main
 ###############################################################################
 
+def main():
+    """  
+    Supports two modes via command-line arguments:
+    - (no args or --eval): Evaluate on validation and test sets
+    - --predict <image_path>: Run inference on a single image
+    - Both can be used together: --eval --predict <image_path>
+    
+    Example usage:
+        python eval_final_model.py                              # Evaluate only
+        python eval_final_model.py --eval                       # Evaluate only
+        python eval_final_model.py --predict path/to/mushroom.jpg    # Predict only
+        python eval_final_model.py --eval --predict path/to/mushroom.jpg  # Both
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--eval", action="store_true", help="Evaluate on val/test sets")
+    parser.add_argument("--predict", type=str, help="Predict label of an image")
+    args = parser.parse_args()
+
+    # Run both if specified, otherwise default to evaluation if neither is specified
+    if args.predict:
+        print(f"Predicting label for image: {args.predict}")
+        label = predict(args.predict)
+        print("\nPrediction:", label)
+    
+    if args.eval or (not args.predict and not args.eval):
+        # Run evaluation if --eval is specified or if no arguments are provided
+        if not args.predict:
+            # Only print header if not doing prediction
+            pass
+        evaluate()
+
+
 if __name__ == "__main__":
-    evaluate()
+    main()

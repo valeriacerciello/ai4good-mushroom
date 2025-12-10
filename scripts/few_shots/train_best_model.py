@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Unified Training + Inference Script for Best Mushroom Classifier
----------------------------------------------------------------
+Training Script for Best Mushroom Classifier
+---------------------------------------------
 
 This script:
 
@@ -10,10 +10,6 @@ This script:
 3. Mixes image + text features using per-class alpha
 4. Trains a final linear+prompts model
 5. Saves the final model
-6. Provides an inference pipeline (predict(image_path))
-7. Provides CLI:
-       --train
-       --predict <image_path>
 
 Place in: ai4good-mushroom/train_best_model.py
 """
@@ -186,146 +182,16 @@ def train_final_model():
 
     print("DONE — Final model saved!\n")
 
-
-###############################################################################
-#                        INFERENCE PIPELINE
-###############################################################################
-
-def load_final_model():
-
-    """
-    Load the trained final model with all necessary components.
-    
-    Loads the checkpoint and reconstructs:
-    - CLIP image encoder (frozen)
-    - Linear classification head
-    - Text embeddings (cached)
-    - Per-class alpha values
-    
-    Returns:
-        Tuple: (clip_model, preprocess, linear_head, label_names, alpha_dict, text_embs)
-            - clip_model: CLIP image encoder in eval mode
-            - preprocess: CLIP image preprocessing function
-            - linear_head: Trained linear classification head
-            - label_names: Ordered class label names
-            - alpha_dict: Per-class image-text mixing weights
-            - text_embs: Dict of text embeddings per label
-    """
-    ckpt = torch.load(SAVE_PATH, map_location="cpu")
-
-    label_names = ckpt["label_names"]
-    K = len(label_names)
-    alpha_dict = ckpt["best_alpha"]
-
-    # Load CLIP backbone
-    backbone = ckpt["backbone"]
-    pretrained = ckpt["pretrained"]
-    clip_model, _, preprocess = open_clip.create_model_and_transforms(
-        backbone, pretrained=pretrained, device=DEVICE
-    )
-    clip_model.eval()
-
-    # Load linear head
-    # First compute feature dimension
-    dummy = torch.zeros(1, 3, 224, 224).to(DEVICE)
-    with torch.no_grad():
-        dim = clip_model.encode_image(dummy).shape[1]
-
-    linear_head = nn.Linear(dim, K).to(DEVICE)
-    linear_head.load_state_dict(ckpt["linear_head"])
-    linear_head.eval()
-
-    # Load text embeddings (cached)
-    text_embs = get_text_embeddings(
-        list(label_names),
-        prompt_set=ckpt["prompt_set"],
-        model_name=backbone,
-        pretrained=pretrained,
-        cache_dir=Path(DEFAULT_CACHE_DIR) / "text_cache",
-        device="cpu",
-    )
-
-    return clip_model, preprocess, linear_head, label_names, alpha_dict, text_embs
-
-
-def predict(image_path):
-    """
-    Run inference on a single image and return predicted mushroom class.
-    
-    Combines CLIP image encoding with per-class text embeddings using learned alpha values.
-    Predicts the class with highest logit from the linear head.
-    
-    Args:
-        image_path (str): Path to image file to classify.
-    
-    Returns:
-        str: Predicted mushroom class label.
-    """
-    clip_model, preprocess, linear_head, label_names, alpha_dict, text_embs = load_final_model()
-
-    image = Image.open(image_path).convert("RGB")
-    image_tensor = preprocess(image).unsqueeze(0).to(DEVICE)
-
-    with torch.no_grad():
-        img_feat = clip_model.encode_image(image_tensor)
-        img_feat = img_feat / img_feat.norm(dim=-1, keepdim=True)
-
-    # Build class-mixed features (image + text with alpha)
-    mixed_feats = []
-    for lbl in label_names:
-        a = alpha_dict.get(lbl, 0.5)
-        txt = text_embs[lbl]["label_embedding"]
-        if isinstance(txt, torch.Tensor):
-            txt = txt.to(DEVICE)
-        else:
-            txt = torch.from_numpy(txt).to(DEVICE)
-        txt = txt / txt.norm()
-
-        mixed = a * img_feat + (1 - a) * txt
-        mixed = mixed / mixed.norm(dim=-1, keepdim=True)
-        mixed_feats.append(mixed)
-
-    mixed_feats = torch.cat(mixed_feats, dim=0).unsqueeze(0)  # [1, K, dim]
-
-    with torch.no_grad():
-        logits = linear_head(mixed_feats.squeeze(0))
-        pred = logits.argmax().item()
-
-    return label_names[pred]
-
-
-###############################################################################
-#                               CLI
-###############################################################################
-
 def main():
-    """
-    CLI entry point for model training and inference.
-    
-    Supports two modes via command-line arguments:
-    - --train: Train and save the final model
-    - --predict <image_path>: Run inference on a single image
+    """   
+    Trains the final best model.
     
     Example usage:
-        python train_best_model.py --train
-        python train_best_model.py --predict path/to/mushroom.jpg
+        python train_best_model.py
     """
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--train", action="store_true", help="Train final best model")
-    parser.add_argument("--predict", type=str, help="Predict label of an image")
-    args = parser.parse_args()
-    print("Arguments:", args)
-
-    if args.train:
-        print("Starting training of final best model...")
-        train_final_model()
-
-    if args.predict:
-        print(f"Predicting label for image: {args.predict}")
-        label = predict(args.predict)
-        print("\nPrediction:", label)
-
-    print("run complete.")
+    print("Starting training of final best model...")
+    train_final_model()
+    print("Training complete.")
 
 
 if __name__ == "__main__":
