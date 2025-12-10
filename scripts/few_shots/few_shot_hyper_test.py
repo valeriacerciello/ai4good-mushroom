@@ -1668,22 +1668,10 @@ def parse_args():
     ap.add_argument("--prompt-sets", default=PROMPT_SET, help="Comma-separated prompt sets to sweep")
     ap.add_argument("--lr-grid", default=LR_GRID, help="Comma-separated learning rates for linear probe")
     ap.add_argument("--wd-grid", default=WD_GRID, help="Comma-separated weight decay values for linear probe")
-    ap.add_argument("--fast", action="store_true", help="Use fast defaults (few epochs, single worker, small hyper grids)")
 
     args = ap.parse_args()
     args.use_prompts_for_prototype = not args.no_prompts_for_prototype
     args.use_prompts_for_linear = not args.no_prompts_for_linear
-
-    # Fast preset: override some defaults to make runs quick for debugging
-    if getattr(args, "fast", False):
-        args.epochs = 5
-        args.max_workers = 1
-        # shrink grids for a quick sweep
-        args.lr_grid = [1e-3]
-        args.wd_grid = [0.0]
-        args.alpha_grid = [0.5]
-        # reduce prompt sets to one
-        args.prompt_sets = ["ensemble"]
 
     # Ensure lists (argparse sometimes gives string)
     if isinstance(args.alpha_grid, str):

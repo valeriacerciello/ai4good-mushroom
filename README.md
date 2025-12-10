@@ -76,29 +76,77 @@ python scripts/eval_zero_shot.py \
 ```
 Metrics appear in `results/metrics/`.
 
-### 4. Run few-shot + prompt-aware sweeps
+### 4. Few-Shot Classification with Prompt-Aware Training
+
+The few-shot script combines CLIP image features with text embeddings and prompt engineering to enable robust mushroom classification from minimal labeled examples. The pipeline automatically optimizes the blending of visual and textual information using per-class alpha weights, supporting K-shot learning for K ∈ {0, 1, 5, 10, 20, 50, 100} (where K=0 is zero-shot using only text).
+
+#### Step 4a: Hyperparameter Sweep & Prompt Selection
+
+Run a comprehensive grid search over few-shot counts, prompts, and linear probe hyperparameters:
 
 ```console
-python scripts/few_shots/hypertuning/few_shot_hyper_test.py --fast
+python scripts/few_shots/few_shot_hyper_test.py
 ```
-Full sweep outputs:
-- Global metrics
-- Per-class metrics
-- `best_alpha.json`
 
-### 5. Train final model
+This sweep evaluates:
+- **Few-shot counts**: 0, 1, 5, 10, 20, 50, 100 examples per class
+- **Prompt templates**: "ensemble", "v1", "names", "delta"
+- **Learning rates**: [1e-3, 3e-3, 3e-2, 3e-1]
+- **Weight decays**: [0, 1e-4, 5e-4]
+- **Multiple OpenCLIP backbones** for robustness
+
+The sweep produces:
+- Per-class alpha accuracies
+- Performance metrics across all configurations
+- Detailed results in `results/few_shot_overall_results.json`
+
+Use `hyperparameter_analysis.ipynb` in the `few_shots/` directory to visualize sweep results and select the best configuration and alpha parameters per class.
+
+#### Step 4b: Train Final Model
+
+Train the final classifier using the best hyperparameters from the sweep:
 
 ```console
-python scripts/few_shots/hypertuning/train_best_model.py --train
+python scripts/few_shots/train_best_model.py
 ```
 
-The final model is stored as `final_model.pt`.
+This step:
+1. Loads optimal hyperparameters and per-class alpha values
+2. Trains a linear classifier on the mixed feature space
+3. Saves the trained model as `final_model.pt` (with backbone suffix if applicable, e.g., `final_model_b32.pt`)
 
-Evaluate:
+#### Step 4c: Evaluate Final Model
+
+Assess model performance on validation and test splits:
 
 ```console
-python scripts/few_shots/hypertuning/eval_final_model.py
+python scripts/few_shots/eval_final_model.py
 ```
+
+Reports comprehensive metrics:
+- **Confusion Matrices**: Per-class prediction breakdown
+- **Top-1 Accuracy**: Fraction of correct predictions
+- **Top-5 Accuracy**: Fraction where true label appears in top-5 candidates
+- **Balanced Accuracy**: Per-class recall averaged across all classes (handles class imbalance)
+- **Macro F1**: F1 score averaged per class
+
+Results are saved to `results/final_model_eval.json` (with backbone suffix if applicable).
+
+#### Step 5. Few Shots Inference on New Images
+
+Once the final model is trained, you can use it to classify new mushroom images:
+
+```console
+python scripts/few_shots/eval_final_model.py --predict /path/to/mushroom_image.jpg
+```
+
+This command:
+- Loads the trained `final_model.pt` model
+- Processes the input image using the same CLIP backbone
+- Returns top-1 and top-5 predictions with confidence scores
+- Outputs classification results to the console
+
+For batch inference on multiple images, modify the evaluation script to iterate over image directories.
 
 ## External Repositories
 

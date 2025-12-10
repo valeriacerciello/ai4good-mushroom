@@ -31,6 +31,7 @@ LABELS = LABELS_N_PROMPT_DIR + "/labels.tsv"
 DEFAULT_PROMPTS_JSON = LABELS_N_PROMPT_DIR + "/delta_prompts.json"
 
 RESULTS_DIR = WORK_ENV + "/results"
+SWEEP_OUTPUT = RESULTS_DIR + "/few_shot_overall_results.json"
 BEST_ALPHA_PATH = RESULTS_DIR + "/best_alpha" + VARIATION_RESULTS_DIR + ".json"
 SAVE_JSON = RESULTS_DIR + "/final_model_eval" + VARIATION_RESULTS_DIR + ".json"
 SAVE_PATH = RESULTS_DIR + "/final_model" + VARIATION_RESULTS_DIR + ".pt"

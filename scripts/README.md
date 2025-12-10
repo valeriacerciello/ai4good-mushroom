@@ -45,15 +45,21 @@ Note to user: adjust the input and output directories inside the files.
 ### Hyperparameter Sweeps
 
 ```console
-python few_shots/hypertuning/few_shot_hyper_test.py
+python few_shots/few_shot_hyper_test.py
 ```
 Produces `best_alpha.json`.
 
 ### Train + Evaluate Final Model
 
 ```console
-python few_shots/hypertuning/train_best_model.py --train
-python few_shots/hypertuning/eval_final_model.py
+python few_shots/train_best_model.py --train
+python few_shots/eval_final_model.py
+```
+
+Note: single-image inference (prediction) was moved to the evaluation script. To predict a single image, run:
+
+```console
+python few_shots/eval_final_model.py --predict /path/to/image.jpg
 ```
 
 
