@@ -39,6 +39,7 @@ ROOT_MUSHROOM = "/zfs/ai4good/datasets/mushroom"
 TRAIN_CSV = os.path.join(ROOT_MUSHROOM, "train.csv")
 VAL_CSV = os.path.join(ROOT_MUSHROOM, "val.csv")
 TEST_CSV = os.path.join(ROOT_MUSHROOM, "test.csv")
+PROMPT_PATH = "/zfs/ai4good/student/vcerci/ai4good-mushroom/data_prompts_label/delta_prompts.json"
 #limits and performance
 MAX_TRAIN_SAMPLES = 200000
 MAX_VAL_SAMPLES = 20000
@@ -563,7 +564,6 @@ def main():
     clip_model.to(device)
 #create text embeddings for each mushroom class using prompts
     processor = open_clip.get_tokenizer(MODEL_NAME)
-    PROMPT_PATH = "/zfs/ai4good/student/vcerci/ai4good-mushroom/data_prompts_label/delta_prompts.json"
     with open(PROMPT_PATH, "r") as f:
         class_prompts = json.load(f)
     print(f"Loaded prompts for {len(class_prompts)} classes")
