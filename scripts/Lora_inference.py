@@ -25,6 +25,9 @@ import glob
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 TEMPERATURE = 0.005
 
+MODEL_NAME = "ViT-B-32-quickgelu"
+PRETRAINED_CHECKPOINT = "laion400m_e32"
+
 Lora_target_modules = [
     "visual.transformer.resblocks.10.attn.in_proj",
     "visual.transformer.resblocks.10.attn.out_proj",
@@ -52,9 +55,7 @@ def load_model(checkpoint_path):
     
     # Get class information
     class_names = checkpoint['classes']
-    
-    model_name = "ViT-B-32-quickgelu"
-    model, _, _ = open_clip.create_model_and_transforms(model_name, pretrained="laion400m_e32")
+    model, _, _ = open_clip.create_model_and_transforms(MODEL_NAME, pretrained=PRETRAINED_CHECKPOINT)
     
     # LoRA configuration 
     lora_config = LoraConfig(

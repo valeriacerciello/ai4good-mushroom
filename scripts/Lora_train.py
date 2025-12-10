@@ -66,6 +66,9 @@ Lora_target_modules = [
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"TRAINING - using: {device}")
 
+MODEL_NAME = "ViT-B-32-quickgelu"
+PRETRAINED_CHECKPOINT = "laion400m_e32"
+
 LR = 1e-3
 WEIGHT_DECAY = 0.01
 TEMPERATURE = 0.005
@@ -545,9 +548,7 @@ def main():
     error_analyzer = ErrorAnalyzer(train_dataset.classes)
 #load pre trained clip model and applies lora for fine tuning
     print("\nLoading CLIP model...")
-    model_name = "ViT-B-32-quickgelu"
-    pretrained_checkpoint = "laion400m_e32"
-    clip_model, _, _ = open_clip.create_model_and_transforms(model_name, pretrained=pretrained_checkpoint)
+    clip_model, _, _ = open_clip.create_model_and_transforms(MODEL_NAME, pretrained=PRETRAINED_CHECKPOINT)
     clip_model.to(device)
 
     lora_config = LoraConfig(
@@ -561,7 +562,7 @@ def main():
     clip_model = get_peft_model(clip_model, lora_config)
     clip_model.to(device)
 #create text embeddings for each mushroom class using prompts
-    processor = open_clip.get_tokenizer("ViT-B-32-quickgelu")
+    processor = open_clip.get_tokenizer(MODEL_NAME)
     PROMPT_PATH = "/zfs/ai4good/student/vcerci/ai4good-mushroom/data_prompts_label/delta_prompts.json"
     with open(PROMPT_PATH, "r") as f:
         class_prompts = json.load(f)
