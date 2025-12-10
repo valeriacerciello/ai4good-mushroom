@@ -101,7 +101,7 @@ def main():
     y = np.array(labels, dtype=np.int64)
     rel = np.array(rel_paths, dtype=object)
 
-    out_dir = Path(args.save-dir) / args.backbone
+    out_dir = Path(args.save_dir) / args.backbone
     out_dir.mkdir(parents=True, exist_ok=True)
     split = Path(args.csv).stem  # train/val/test
 

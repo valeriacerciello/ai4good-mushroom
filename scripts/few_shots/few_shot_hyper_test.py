@@ -9,72 +9,6 @@ torch._dynamo.disable()
 torch._dynamo.config.suppress_errors = True
 # =================================================================
 
-"""
-Patched & parallelized version of test_few_shots_overall_patched.py
-
-Major changes:
-- Parallelized CPU-bound sweep operations using ThreadPoolExecutor while avoiding GPU oversubscription.
-- Added --cpu-probes flag to force small linear-probe trainings to run on CPU (default True) so that multiple sweeps can be parallelized across CPU cores while the GPU remains available for heavy encoding work.
-- Added safer max_workers handling: when device is 'cuda' we avoid parallel GPU-using tasks across workers.
-- Vectorized / batched evaluations where safe. Kept all sweep grids identical.
-- Minor DataLoader and caching tweaks retained, and torch.compile invocations preserved where available.
-
-Save as new file and run similarly to the original.
-"""
-
-import os
-import sys
-import argparse
-import json
-import hashlib
-import zipfile
-from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
-import csv
-import numpy as np
-import pandas as pd
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from PIL import Image
-import datetime
-import math
-import time
-
-import torch
-import torch.nn.functional as F
-from torch import nn
-from torch.utils.data import DataLoader, TensorDataset, Dataset
-from sklearn.metrics import f1_score, confusion_matrix
-
-# require open_clip
-try:
-    import open_clip
-except Exception as e:
-    raise ImportError("open_clip (open_clip_torch) is required. Install with: pip install open_clip_torch") from e
-
-# tqdm: use it only if available; we'll choose to enable bars only in TTY
-try:
-    from tqdm.auto import tqdm
-except Exception:
-    def tqdm(x, *args, **kwargs): return x
-
-# Limit CPU threads (avoid oversubscription on shared node)
-MAX_WORKERS = 64
-BATTCH_SIZE = 512
-
-# ---------- global environment & torch tuning (optimized) ----------
-# Limit CPU threads (avoid oversubscription on shared node)
-os.environ.setdefault("OMP_NUM_THREADS", "16")
-os.environ.setdefault("MKL_NUM_THREADS", "16")
-os.environ.setdefault("NUMEXPR_MAX_THREADS", "16")
-# Enable faster GPU memory allocator (if available)
-# TODO: replace PYTORCH_CUDA_ALLOC_CONF with PYTORCH_ALLOC_CONF
-os.environ.setdefault("PYTORCH_ALLOC_CONF", "max_split_size_mb:128")
-# Reduce torch.cudnn nondeterminism cost but keep performance heuristics
-torch.backends.cuda.matmul.allow_tf32 = True
-torch.backends.cudnn.benchmark = True
-# Set reasonable default threads
-torch.set_num_threads(int(os.environ.get("OMP_NUM_THREADS", "16")))
-
 # TorchDynamo/compiler behavior:
 # - Dynamo can cause many costly recompiles when global state (grad_mode, device) changes.
 # - For long-running sweeping/eval jobs it's frequently faster to disable it.
@@ -90,44 +24,13 @@ except Exception:
     # If torch._dynamo is missing or errors, continue without failing
     pass
 
-# Helpful debug env flags (uncomment if you want recompilation diagnostics)
-# os.environ.setdefault("TORCH_LOGS", "recompiles")
+"""
+Giant Hyperparameter sweep of open CLIP few shots with prompts
+"""
+
+from scripts.few_shots.import_n_config.hyper_setup import *
 
 
-
-# ---------- globals ----------
-torch.set_float32_matmul_precision('high')
-
-DEFAULT_PRETRAINED = {
-    "PE-Core-bigG-14-448": "meta",
-    "ViT-gopt-16-SigLIP2-384": "webli",
-    "ViT-H-14-378-quickgelu": "dfn5b",
-    "ViT-B-32-quickgelu": "openai",
-    "ViT-L-14": "openai",
-    "ViT-B-16": "openai",
-}
-SHOTS = [0, 1, 5, 10, 20, 50, 100]
-ALPHAS = [0.0,0.2,0.4,0.6,0.8,1.0]
-TEMP_GRID = [1] #,5,10,20,50,100]
-PROMPT_SET = ["ensemble", "v1", "names", "delta"]
-LR_GRID = [1e-3, 3e-3, 3e-2, 3e-1]
-WD_GRID = [0,1e-4,5e-4]
-MIX_STRATEGIES = ["none"]# ["normalize","none"]
-
-WORK_ENV = "/home/c/dkorot/AI4GOOD"
-DATA_ROOT = WORK_ENV + "/provided_dir/datasets/mushroom/merged_dataset"
-TRAIN_CSV = WORK_ENV + "/ai4good-mushroom/splits/train.csv"
-VAL_CSV = WORK_ENV + "/ai4good-mushroom/splits/val.csv"
-TEST_CSV = WORK_ENV + "/ai4good-mushroom/splits/test.csv"
-LABELS = WORK_ENV + "/ai4good-mushroom/data_prompts_label/labels.tsv"
-RESULTS_DIR = WORK_ENV + "/ai4good-mushroom/results"
-DEFAULT_CACHE_DIR = "/zfs/ai4good/student/dkorot/ai4good-mushroom/features"
-DEFAULT_PROMPTS_JSON = WORK_ENV + "/ai4good-mushroom/data_prompts_label/delta_prompts.json"
-
-DEFAULT_TEXT_CACHE_DIR = Path(".cache_text_embeddings")
-DEFAULT_TEXT_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-
-# ------------------------------
 # Prompt templates & clip_utils-like functions
 # ------------------------------
 SHORT_PROMPTS = [
@@ -146,6 +49,25 @@ NAME_PROMPT_TEMPLATES = [
 
 def _build_prompt_list_for_label(label: str, prompt_set: str = "ensemble",
                                  include_common_names: bool = False, mg: Optional[Any] = None) -> List[str]:
+    """
+    Build a list of text prompts for a given class label using different prompt strategies.
+    
+    Args:
+        label (str): The class label/mushroom name to generate prompts for.
+        prompt_set (str): Type of prompt set to use. Options are:
+            - "v1": Short template-based prompts
+            - "names": Prompts using scientific and common names
+            - "delta": Custom prompts loaded from JSON file
+            - "ensemble": Combination of all prompt types
+        include_common_names (bool): Whether to include common name variants in prompts.
+        mg (Optional[Any]): Metadata/knowledge graph object containing species information.
+    
+    Returns:
+        List[str]: A list of text prompts for the given label.
+    
+    Raises:
+        ValueError: If prompt_set is unknown or if delta prompts cannot be loaded.
+    """
     if prompt_set == "v1":
         return [t.format(label=label) for t in SHORT_PROMPTS]
     elif prompt_set == "names":
@@ -207,14 +129,33 @@ def get_text_embeddings(labels: List[str],
                         cache_dir: Optional[Path] = None,
                         model=None, tokenizer=None) -> Dict[str, Any]:
     """
-    Compute and cache text embeddings per label.
+    Compute and cache CLIP text embeddings for multiple labels with various prompt strategies.
+    
+    Generates text prompts for each label and encodes them using a CLIP text encoder. Results are
+    cached using SHA-1 hashes for fast reloading. Supports prompt reuse across multiple model instances.
 
-    Improvements:
-      - Accepts already-created `model` and `tokenizer` so callers can reuse a single CLIP instance per-backbone.
-      - Uses a deterministic cache key based on (backbone, pretrained, prompt_set, label).
-      - Avoids torch.compile on encode_text to prevent repeated slow compile attempts.
-      - Forces text encoding on CPU when device == 'cpu' for easy parallelism.
-    Returns: {label: {'prompts': [...], 'prompt_embeddings': Tensor (n x D), 'label_embedding': Tensor (D,)}}
+    Args:
+        labels (List[str]): List of class labels to compute embeddings for.
+        prompt_set (str): Type of prompt set ("ensemble", "v1", "names", "delta").
+        model_name (str): CLIP model name (e.g., "ViT-B-32").
+        device (Optional[str]): Device to run encoding on ("cpu" or "cuda"). Defaults to "cuda" if available.
+        batch_size (int): Batch size for encoding prompts (default 128).
+        include_common_names (bool): Whether to include common name variants.
+        common_prompts_path (Optional[str]): Path to JSON file with custom prompts.
+        pretrained (str): Pretrained weights source ("openai", "webli", etc.).
+        cache_dir (Optional[Path]): Directory to cache embeddings. Creates if doesn't exist.
+        model: Pre-created CLIP model (optional, for reuse across calls).
+        tokenizer: Pre-created CLIP tokenizer (optional, for reuse across calls).
+    
+    Returns:
+        Dict[str, Any]: Dictionary mapping label names to embedding data:
+            - "prompts": List[str] - The actual text prompts used
+            - "prompt_embeddings": Tensor (n_prompts, embedding_dim) - Individual prompt embeddings
+            - "label_embedding": Tensor (embedding_dim,) - Mean embedding across prompts
+    
+    Note:
+        Caches embeddings using SHA-1 hash keys for deterministic cache hits. Text encoding 
+        is done on CPU for thread-safety when parallelizing across multiple workers.
     """
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     cache_dir = Path(cache_dir or DEFAULT_TEXT_CACHE_DIR)
@@ -305,6 +246,15 @@ def get_text_embeddings(labels: List[str],
 
 # Simple timestamped logger for sweep jobs
 def _log(msg: str):
+    """
+    Print a timestamped log message to console.
+    
+    Args:
+        msg (str): The message to log.
+    
+    Returns:
+        None. Prints to stdout with ISO format timestamp prefix.
+    """
     try:
         ts = datetime.datetime.now().isoformat(sep=' ', timespec='seconds')
     except Exception:
@@ -316,6 +266,17 @@ def _log(msg: str):
 # Labels & prompts
 # ------------------------------
 def load_labels(labels_tsv: str) -> Tuple[np.ndarray, Dict[str, int]]:
+    """
+    Load class labels and IDs from a TSV file.
+    
+    Args:
+        labels_tsv (str): Path to TSV file with format: id<tab>label_name (one per line).
+    
+    Returns:
+        Tuple[np.ndarray, Dict[str, int]]: 
+            - label_names: Array of label names indexed by class ID
+            - name_to_id: Dictionary mapping label names to their integer IDs
+    """
     ids, names = [], []
     with open(labels_tsv, "r", encoding="utf-8") as f:
         for line in f:
@@ -331,6 +292,17 @@ def load_labels(labels_tsv: str) -> Tuple[np.ndarray, Dict[str, int]]:
     return np.array(names, dtype=object), {n: i for i, n in zip(ids, names)}
 
 def load_prompts(prompts_path: Optional[str], label_names: List[str]) -> Dict[str, List[str]]:
+    """
+    Load custom prompts from a JSON file or use default prompts.
+    
+    Args:
+        prompts_path (Optional[str]): Path to JSON file mapping label names to prompt lists.
+        label_names (List[str]): List of all possible label names for fallback defaults.
+    
+    Returns:
+        Dict[str, List[str]]: Dictionary mapping each label to a list of text prompts.
+                              Uses custom prompts if available, otherwise defaults to simple templates.
+    """
     if prompts_path and os.path.exists(prompts_path):
         try:
             with open(prompts_path, "r", encoding="utf-8") as f:
@@ -355,6 +327,27 @@ def load_prompts(prompts_path: Optional[str], label_names: List[str]) -> Dict[st
 # ------------------------------
 def ensure_features(split: str, backbone: str, data_root: str, csv_path: str, labels_tsv: str,
                     save_dir: str = DEFAULT_CACHE_DIR, pretrained: str = "openai") -> Tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]:
+    """
+    Load or compute and cache image embeddings for a dataset split using a CLIP backbone.
+    
+    Args:
+        split (str): Dataset split name ("train", "val", "test").
+        backbone (str): CLIP model name (e.g., "ViT-B-32").
+        data_root (str): Path to image data directory.
+        csv_path (str): Path to CSV file with columns [filepath, label].
+        labels_tsv (str): Path to TSV file with class labels.
+        save_dir (str): Directory to cache computed features.
+        pretrained (str): Pretrained weights source ("openai", "webli", etc.).
+    
+    Returns:
+        Tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]:
+            - X: Image embeddings array of shape (n_samples, embedding_dim)
+            - y: Label indices array of shape (n_samples,)
+            - paths: Optional image file paths array (or None)
+    
+    Note:
+        If cache doesn't exist, calls external dump_features.py script to compute embeddings.
+    """
     cache_path = Path(save_dir) / backbone / f"{split}.npz"
     if cache_path.exists():
         try:
@@ -384,17 +377,56 @@ def ensure_features(split: str, backbone: str, data_root: str, csv_path: str, la
 # Metrics & sampling
 # ------------------------------
 def topk_acc(y_true: np.ndarray, scores: np.ndarray, k: int) -> float:
+    """
+    Compute top-K accuracy given true labels and prediction scores.
+    
+    Args:
+        y_true (np.ndarray): True class labels, shape (n_samples,).
+        scores (np.ndarray): Prediction scores/logits, shape (n_samples, n_classes).
+        k (int): Number of top predictions to consider.
+    
+    Returns:
+        float: Fraction of samples where true label is in top-K predictions (0.0 to 1.0).
+    """
     k = min(k, scores.shape[1])
     topk = np.argsort(-scores, axis=1)[:, :k]
     return float((topk == y_true[:, None]).any(axis=1).mean())
 
 def balanced_acc(y_true: np.ndarray, y_pred: np.ndarray, K: int) -> float:
+    """
+    Compute balanced accuracy (mean of per-class recall rates).
+    
+    Args:
+        y_true (np.ndarray): True class labels, shape (n_samples,).
+        y_pred (np.ndarray): Predicted class labels, shape (n_samples,).
+        K (int): Total number of classes.
+    
+    Returns:
+        float: Average per-class recall, weighted equally across classes (0.0 to 1.0).
+    """
     cm = confusion_matrix(y_true, y_pred, labels=np.arange(K))
     with np.errstate(invalid="ignore", divide="ignore"):
         per_class = np.where(cm.sum(1) > 0, np.diag(cm) / cm.sum(1), 0.0)
     return float(np.nanmean(per_class))
 
 def sample_few_shot_indices(y_train: np.ndarray, K: int, n_shot: int, rng: np.random.Generator) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Sample few-shot support indices stratified by class.
+    
+    Args:
+        y_train (np.ndarray): Training set labels, shape (n_train_samples,).
+        K (int): Total number of classes.
+        n_shot (int): Number of samples to select per class.
+        rng (np.random.Generator): NumPy random number generator for reproducibility.
+    
+    Returns:
+        Tuple[np.ndarray, np.ndarray]:
+            - support_indices: Array of selected training indices
+            - support_labels: Corresponding class labels (0 to K-1)
+    
+    Raises:
+        ValueError: If any class has no training examples.
+    """
     support_indices = []
     support_labels = []
     for k in range(K):
@@ -411,6 +443,17 @@ def sample_few_shot_indices(y_train: np.ndarray, K: int, n_shot: int, rng: np.ra
 # Per-class accuracy helper
 # ------------------------------
 def per_class_accuracy(y_true: np.ndarray, y_pred: np.ndarray, label_names: List[str]) -> Dict[str, float]:
+    """
+    Compute per-class accuracy for each label.
+    
+    Args:
+        y_true (np.ndarray): True class labels, shape (n_samples,).
+        y_pred (np.ndarray): Predicted class labels, shape (n_samples,).
+        label_names (List[str]): Ordered list of class label names.
+    
+    Returns:
+        Dict[str, float]: Dictionary mapping label names to their individual accuracy values.
+    """
     accs = {}
     for k, name in enumerate(label_names):
         mask = (y_true == k)
@@ -425,11 +468,9 @@ def make_record(
     shot,
     model,
     alpha,
-    temp,
     prompt_set,
     lr,
     weight_decay,
-    mix_strategy,
     split_name,
     backbone,
     y_true,
@@ -438,7 +479,28 @@ def make_record(
     label_names,
 ):
     """
-    Build a unified result record with optional parameters auto-filled as None.
+    Build a unified evaluation result record with metrics.
+    
+    Computes multiple metrics (top1, top5, balanced accuracy, macro F1) and per-class accuracies,
+    then appends a comprehensive result dictionary to the records list.
+    
+    Args:
+        records: List to append the result record to.
+        shot (int): Number of few-shot samples used.
+        model (str): Model type ("prototype", "linear+prompts", "zero-shot").
+        alpha (float): Prompt mixing weight (0=image only, 1=text only).
+        prompt_set (str): Type of prompt set used.
+        lr (float): Learning rate (if linear probe).
+        weight_decay (float): Weight decay (if linear probe).
+        split_name (str): Dataset split ("train", "val", "test").
+        backbone (str): CLIP model backbone name.
+        y_true (np.ndarray): True labels.
+        y_pred (np.ndarray): Predicted labels.
+        scores (np.ndarray): Prediction scores/logits.
+        label_names (List[str]): Ordered list of class names.
+    
+    Returns:
+        List: Updated records list with the new result appended.
     """
     top1 = (y_pred == y_true).mean()
     bal = balanced_acc(y_true, y_pred,  len(label_names))
@@ -451,11 +513,9 @@ def make_record(
     "shot": shot,
     "model": model,    # e.g. "prototype" or "linear"
     "alpha": alpha,
-    "temp": temp,
     "prompt_set": prompt_set,
     "lr": lr,
     "weight_decay": weight_decay,
-    "mix_strategy": mix_strategy,
     "split": split_name,
     "backbone": backbone,
     "top1": float(top1),
@@ -471,6 +531,17 @@ def make_record(
 # Prototype & linear probe
 # ------------------------------
 def prototype_classifier(X_support: np.ndarray, y_support: np.ndarray, K: int) -> np.ndarray:
+    """
+    Build prototype classifiers by computing class mean embeddings.
+    
+    Args:
+        X_support (np.ndarray): Support set embeddings, shape (n_support, embedding_dim).
+        y_support (np.ndarray): Support set labels, shape (n_support,).
+        K (int): Total number of classes.
+    
+    Returns:
+        np.ndarray: Prototype vectors normalized to unit norm, shape (K, embedding_dim).
+    """
     D = X_support.shape[1]
     prototypes = np.zeros((K, D), dtype=np.float32)
     for k in range(K):
@@ -484,7 +555,21 @@ def prototype_classifier(X_support: np.ndarray, y_support: np.ndarray, K: int) -
 
 def prototype_classifier_with_prompts(X_support: np.ndarray, y_support: np.ndarray, K: int,
                                       label_names: List[str], text_embs: Dict[str, Any],
-                                      alpha: float = 0.5, mix_strategy: str = 'normalize') -> np.ndarray:
+                                      alpha: float = 0.5) -> np.ndarray:
+    """
+    Build prototypes by mixing image support embeddings with text embeddings.
+    
+    Args:
+        X_support (np.ndarray): Support set embeddings, shape (n_support, embedding_dim).
+        y_support (np.ndarray): Support set labels, shape (n_support,).
+        K (int): Total number of classes.
+        label_names (List[str]): Ordered list of class label names.
+        text_embs (Dict[str, Any]): Text embeddings dict with "label_embedding" for each label.
+        alpha (float): Mixing weight between image and text features (0=image only, 1=text only).
+    
+    Returns:
+        np.ndarray: Mixed prototype vectors, shape (K, embedding_dim).
+    """
     D = X_support.shape[1]
     prototypes = np.zeros((K, D), dtype=np.float32)
     for k in range(K):
@@ -511,27 +596,66 @@ def prototype_classifier_with_prompts(X_support: np.ndarray, y_support: np.ndarr
                 txt_proto = txt_proto / n
 
         combined = alpha * img_proto + (1.0 - alpha) * txt_proto
-        if mix_strategy == 'normalize':
-            n = np.linalg.norm(combined)
-            if n > 0:
-                combined = combined / n
         prototypes[k] = combined
     return prototypes
 
 class LinearProbe(nn.Module):
+    """
+    Simple linear classifier head for few-shot learning.
+    
+    Maps embedding vectors to class logits via a single fully-connected layer.
+    
+    Attributes:
+        linear (nn.Linear): Linear layer from embedding dimension to number of classes.
+    """
     def __init__(self, dim: int, K: int):
+        """
+        Initialize the linear probe.
+        
+        Args:
+            dim (int): Input embedding dimension.
+            K (int): Number of output classes.
+        """
         super().__init__()
         self.linear = nn.Linear(dim, K)
 
     def forward(self, x):
+        """
+        Forward pass through linear layer.
+        
+        Args:
+            x: Input embeddings of shape (..., dim).
+        
+        Returns:
+            Class logits of shape (..., K).
+        """
         return self.linear(x)
 
 def train_linear_probe(X_support: np.ndarray, y_support: np.ndarray, X_val: Optional[np.ndarray] = None, y_val: Optional[np.ndarray] = None,
                        epochs: int = 200, lr: float = 1e-3, batch_size: int = 32, device: str = "cpu", seed: int = 42,
                        compile_model: bool = False, show_progress: bool = False, weight_decay: float = 1e-4) -> nn.Module:
     """
-    Train a linear probe. Safe for CPU or GPU.
-    compile_model flag will attempt torch.compile once in try/except (non-fatal if unsupported).
+    Train a linear probe classifier on support set embeddings.
+    
+    Args:
+        X_support (np.ndarray): Support set embeddings, shape (n_support, embedding_dim).
+        y_support (np.ndarray): Support set labels, shape (n_support,).
+        X_val (Optional[np.ndarray]): Validation set embeddings for early stopping.
+        y_val (Optional[np.ndarray]): Validation set labels.
+        epochs (int): Number of training epochs (default 200).
+        lr (float): Learning rate for AdamW optimizer (default 1e-3).
+        batch_size (int): Batch size for training (default 32).
+        device (str): Device to train on ("cpu" or "cuda", default "cpu").
+        seed (int): Random seed for reproducibility.
+        compile_model (bool): Whether to use torch.compile for speedup (default False).
+        show_progress (bool): Whether to show progress bar (default False).
+        weight_decay (float): Weight decay for AdamW (default 1e-4).
+    
+    Returns:
+        nn.Module: Trained LinearProbe model with best validation state restored.
+    
+    Note:
+        Uses early stopping with best validation loss tracking. Supports both CPU and GPU training.
     """
     torch.manual_seed(seed)
     X = torch.from_numpy(X_support).float().to(device)
@@ -596,6 +720,30 @@ def train_linear_probe_with_prompts(
     X_support, y_support, label_names, text_embs, K, alpha=0.5,
     epochs=200, lr=1e-3, batch_size=32, device="cpu",
     seed=42, compile_model=False, show_progress=False):
+    """
+    Train a linear probe with text-guided feature augmentation.
+    
+    Mixes support set embeddings with text embeddings per-class before training the linear probe.
+    This approach provides pseudo-examples of text-visual alignment for each class.
+    
+    Args:
+        X_support (np.ndarray): Support set embeddings, shape (n_support, embedding_dim).
+        y_support (np.ndarray): Support set labels.
+        label_names (List[str]): List of class label names.
+        text_embs (Dict): Text embeddings with "label_embedding" field per label.
+        K (int): Number of classes.
+        alpha (float): Mixing weight between image and text features (default 0.5).
+        epochs (int): Number of training epochs.
+        lr (float): Learning rate.
+        batch_size (int): Batch size.
+        device (str): Device to train on ("cpu" or "cuda").
+        seed (int): Random seed.
+        compile_model (bool): Whether to use torch.compile.
+        show_progress (bool): Whether to show progress.
+    
+    Returns:
+        nn.Module: Trained linear probe model.
+    """
 
     # mix image & text features per class and then call train_linear_probe
     X_mixed = []
@@ -630,6 +778,23 @@ def train_linear_probe_with_prompts(
 def zero_shot_scores(label_names: List[str], backbone: str, pretrained: str, device: str,
                      prompts_path: Optional[str] = None, cache_dir: str = DEFAULT_CACHE_DIR,
                      batch_size: int = 128) -> np.ndarray:
+    """
+    Compute zero-shot classification scores using prompt embeddings.
+    
+    Caches per-label mean text embeddings and returns a score matrix for zero-shot prediction.
+    
+    Args:
+        label_names (List[str]): List of class label names.
+        backbone (str): CLIP model name.
+        pretrained (str): Pretrained weights source.
+        device (str): Device for computation.
+        prompts_path (Optional[str]): Path to custom prompts JSON.
+        cache_dir (str): Directory to cache embeddings.
+        batch_size (int): Batch size for encoding.
+    
+    Returns:
+        np.ndarray: Mean text embeddings shape (embedding_dim, n_classes) - transposed for efficient scoring.
+    """
     cache_path = Path(cache_dir) / f"{backbone}_zs_embeddings.npz"
     if cache_path.exists():
         z = np.load(cache_path)
@@ -674,15 +839,43 @@ def zero_shot_scores(label_names: List[str], backbone: str, pretrained: str, dev
 # Image encoding utilities (batched) with progress
 # ------------------------------
 class ImageDataset(Dataset):
+    """
+    PyTorch Dataset for loading images from a list of file paths.
+    
+    Loads images and applies CLIP preprocessing transformations.
+    
+    Attributes:
+        paths (List[str]): List of image file paths.
+        preprocess: CLIP preprocessing function.
+        root (str): Root directory for relative paths.
+    """
     def __init__(self, image_paths: List[str], preprocess, root: str = "."):
+        """
+        Initialize the image dataset.
+        
+        Args:
+            image_paths (List[str]): List of image file paths (absolute or relative to root).
+            preprocess: CLIP preprocessing function.
+            root (str): Root directory for resolving relative paths.
+        """
         self.paths = image_paths
         self.preprocess = preprocess
         self.root = root
 
     def __len__(self):
+        """Return the total number of images in the dataset."""
         return len(self.paths)
 
     def __getitem__(self, idx):
+        """
+        Load and preprocess an image.
+        
+        Args:
+            idx (int): Index of the image to load.
+        
+        Returns:
+            Tensor: Preprocessed image tensor, or None if loading fails.
+        """
         p = self.paths[idx]
         local = p if os.path.isabs(p) else os.path.join(self.root, p)
         if not os.path.exists(local):
@@ -695,10 +888,27 @@ def encode_images(model, preprocess, image_paths: List[str], device: str, batch_
                   cache_prefix: Optional[str] = None, cache_dir: str = DEFAULT_CACHE_DIR, root: str = ".",
                   show_progress: bool = False):
     """
-    Faster and more deterministic image encoder:
-      - Uses vectorized DataLoader with fewer workers to avoid CPU oversubscription.
-      - Writes/reads float32 .npy cache for faster IO.
-      - Returns a contiguous torch.Tensor on CPU (list in calling code still works).
+    Encode a list of images into CLIP embeddings with caching and batching.
+    
+    Uses a DataLoader to efficiently encode images in batches. Results can be cached to disk
+    for fast reloading on subsequent calls. Handles memory efficiently with fp32 conversion.
+    
+    Args:
+        model: CLIP image encoder model.
+        preprocess: CLIP preprocessing function.
+        image_paths (List[str]): List of image file paths.
+        device (str): Device for encoding ("cuda" or "cpu").
+        batch_size (int): Batch size for encoding (default 32).
+        cache_prefix (Optional[str]): Prefix for cache file (e.g., "train"). If provided, cache is used/saved.
+        cache_dir (str): Directory to store cache files.
+        root (str): Root directory for resolving relative image paths.
+        show_progress (bool): Whether to show progress bar (default False).
+    
+    Returns:
+        List[torch.Tensor]: List of image embeddings, one per input image.
+    
+    Note:
+        Caches are saved as float32 .npy files for fast mmap loading. Invalid images return None.
     """
     cache_dir = Path(cache_dir)
     if cache_prefix:
@@ -755,6 +965,24 @@ def encode_images(model, preprocess, image_paths: List[str], device: str, batch_
 # ------------------------------
 def get_text_embeddings_bundle_from_clip(model_name: str, model, tokenizer, label_prompts: Dict[str, List[str]],
                                         device: str = "cuda", batch_size: int = 128, show_progress: bool = False):
+    """
+    Encode all prompts for all labels using a CLIP text encoder.
+    
+    Args:
+        model_name (str): CLIP model name (for documentation).
+        model: CLIP text encoder model.
+        tokenizer: CLIP tokenizer.
+        label_prompts (Dict[str, List[str]]): Dictionary mapping label names to lists of prompts.
+        device (str): Device for encoding (default "cuda").
+        batch_size (int): Batch size for encoding (default 128).
+        show_progress (bool): Whether to show progress bar (default False).
+    
+    Returns:
+        Dict[str, Dict]: Dictionary mapping labels to embedding bundles with keys:
+            - "prompts": List of text prompts
+            - "prompt_embeddings": Tensor of individual prompt embeddings
+            - "label_embedding": Mean embedding across prompts
+    """
     results = {}
     label_items = list(label_prompts.items())
     iterator = label_items
@@ -780,6 +1008,17 @@ def get_text_embeddings_bundle_from_clip(model_name: str, model, tokenizer, labe
     return results
 
 def score_all_vectorized(image_embeddings: List[torch.Tensor], mean_dict: Dict[str, torch.Tensor], labels: List[str]):
+    """
+    Compute cosine similarity scores between images and class prototypes in vectorized form.
+    
+    Args:
+        image_embeddings (List[torch.Tensor]): List of image embedding vectors.
+        mean_dict (Dict[str, torch.Tensor]): Dictionary mapping labels to prototype embeddings.
+        labels (List[str]): Ordered list of label names corresponding to mean_dict keys.
+    
+    Returns:
+        List[str]: Predicted label for each image (most similar prototype).
+    """
     img_mat = torch.stack([e for e in image_embeddings if e is not None])
     mean_mat = torch.stack([mean_dict[l] for l in labels])
     sims = img_mat @ mean_mat.T
@@ -787,6 +1026,16 @@ def score_all_vectorized(image_embeddings: List[torch.Tensor], mean_dict: Dict[s
     return [labels[i] for i in preds_idx]
 
 def acc_from_preds(preds: List[str], trues: List[str]) -> float:
+    """
+    Compute accuracy from prediction and ground truth labels.
+    
+    Args:
+        preds (List[str]): Predicted labels.
+        trues (List[str]): Ground truth labels.
+    
+    Returns:
+        float: Fraction of correct predictions (0.0 to 1.0).
+    """
     return float(sum(p == t for p, t in zip(preds, trues)) / len(trues))
 
 # ------------------------------
@@ -794,11 +1043,32 @@ def acc_from_preds(preds: List[str], trues: List[str]) -> float:
 # ------------------------------
 def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List[str], K: int, show_progress: bool = False):
     """
-    Main evaluation function. Major parallelization strategy:
-      - For prototype prompt-alpha sweeps we parallelize alpha evaluations using ThreadPoolExecutor (cpu-bound).
-      - For linear probe sweeps: training uses device=args.probe_device (CPU by default to avoid GPU oversubscription).
-        Trainings across (lr,wd) are submitted to ThreadPoolExecutor if probe_device == 'cpu' (parallel).
-        If probe_device == 'cuda' then linear probe training is performed sequentially to avoid GPU contention.
+    Main evaluation pipeline for a single CLIP backbone across multiple few-shot configurations.
+    
+    Performs comprehensive hyperparameter sweeps including:
+    - Zero-shot evaluation (if shot=0)
+    - Few-shot prototype classifiers with and without text prompts
+    - Linear probe classifiers with text-augmented training
+    - Temperature and alpha (mixing weight) grids
+    
+    Uses parallelization where safe:
+    - Alpha sweeps parallelized via ThreadPoolExecutor (CPU-bound)
+    - Linear probe (lr, wd) sweeps parallelized if probe_device=="cpu"
+    
+    Args:
+        backbone (str): CLIP model name (e.g., "ViT-B-32").
+        args (argparse.Namespace): Configuration object with fields:
+            - data_root, train/val/test csv paths, labels tsv
+            - device, save_dir, results_dir
+            - shots, alpha_grid, lr_grid, wd_grid
+            - prompt_sets, use_prompts_for_prototype, use_prompts_for_linear
+            - cpu_probes, max_workers, epochs, batch_size, seed
+        label_names (List[str]): Ordered list of class names.
+        K (int): Number of classes.
+        show_progress (bool): Whether to display progress bars.
+    
+    Returns:
+        List[Dict]: List of result records, one per configuration tested.
     """
     model_pretrained = args.pretrained.get(backbone, "openai")
     if show_progress and sys.stdout.isatty():
@@ -875,7 +1145,7 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
             print(f"[{backbone}] zero-shot evaluation on {split_name}...")
             scores_zs = X_gpu @ torch.from_numpy(text_embeddings).float().to(device)
             yhat = torch.argmax(scores_zs, dim=1).cpu().numpy()
-            records = make_record(records, 0, "zero-shot", 0.0, 0.0, "none", 0.0, 0.0, "none", split_name, backbone, y, yhat, scores_zs.cpu().numpy(), label_names)
+            records = make_record(records, 0, "zero-shot", 0.0, 0.0, 0.0, "none", split_name, backbone, y, yhat, scores_zs.cpu().numpy(), label_names)
 
     shot_list = sorted([s for s in args.shots if s > 0])
     shot_iter = shot_list
@@ -911,14 +1181,14 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
             with ThreadPoolExecutor(max_workers=max_workers) as ex:
                 futures = []
                 future_to_job = {}
-                for (prompt_set, mix_strategy, temp, text_embs_for_set, X_sup_loc, y_sup_loc) in prototype_tasks:
+                for (prompt_set, text_embs_for_set, X_sup_loc, y_sup_loc) in prototype_tasks:
                     # For each alpha, spawn tasks for all alphas (alpha loop is independent)
                     for alpha in args.alpha_grid:
-                        job_desc = f"prototype+prompts shot={shot} prompt_set={prompt_set} alpha={alpha} mix={mix_strategy} temp={temp}"
+                        job_desc = f"prototype+prompts shot={shot} prompt_set={prompt_set} alpha={alpha}"
                         _log(f"[{backbone}] SUBMIT {job_desc}")
                         fut = ex.submit(_eval_prototype_alpha,
                                          X_sup_loc, y_sup_loc, K,
-                                         list(label_names), text_embs_for_set, alpha, mix_strategy, temp,
+                                         list(label_names), text_embs_for_set, alpha,
                                          X_vl_gpu, y_vl, X_te_gpu, y_te, backbone, shot, prompt_set)
                         futures.append(fut)
                         future_to_job[fut] = job_desc
@@ -972,7 +1242,6 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
                                     probe_device,
                                     args.seed + int(shot),
                                     args.no_compile,
-                                    args.temp_grid,
                                     backbone,
                                     shot,
                                     prompt_set,
@@ -998,7 +1267,7 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
                                     X_sup, y_sup, X_vl, y_vl,
                                         X_te, y_te, list(label_names), text_embs_for_set, K,
                                     alpha, args.epochs, lr, args.batch_size, probe_device,
-                                    args.seed + int(shot), args.no_compile, args.temp_grid, backbone, shot, prompt_set, wd)
+                                    args.seed + int(shot), args.no_compile, backbone, shot, prompt_set, wd)
                                 _log(f"[{backbone}] DONE {job_desc} -> {len(recs)} records")
                                 records.extend(recs)
                             except Exception as e:
@@ -1007,13 +1276,31 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
     return records
 
 
-def _eval_prototype_alpha(X_sup, y_sup, K, label_names, text_embs_for_set, alpha, mix_strategy, temp,
+def _eval_prototype_alpha(X_sup, y_sup, K, label_names, text_embs_for_set, alpha,
                           X_vl_gpu, y_vl, X_te_gpu, y_te, backbone, shot, prompt_set):
     """
-    Evaluate a single alpha value for prototype+prompts combination.
-    This function is safe to run inside a ThreadPoolExecutor because:
-      - It performs text/image prototype mixing in numpy/CPU.
-      - It returns records; final evaluation uses the already-moved-to-device X_vl_gpu/X_te_gpu tensors.
+    Evaluate a single alpha for prototype+prompts classifier.
+    
+    Thread-safe function designed to run inside ThreadPoolExecutor. Computes prototypes by mixing
+    image and text embeddings, then evaluates on validation and test sets.
+    
+    Args:
+        X_sup (np.ndarray or torch.Tensor): Support set embeddings.
+        y_sup (np.ndarray): Support set labels.
+        K (int): Number of classes.
+        label_names (List[str]): Class label names.
+        text_embs_for_set (Dict): Text embeddings for the current prompt set.
+        alpha (float): Image-text mixing weight.
+        X_vl_gpu (torch.Tensor): Validation features on device.
+        y_vl (np.ndarray): Validation labels.
+        X_te_gpu (torch.Tensor): Test features on device.
+        y_te (np.ndarray): Test labels.
+        backbone (str): Model name for logging.
+        shot (int): Few-shot count for logging.
+        prompt_set (str): Prompt set name for logging.
+    
+    Returns:
+        List[Dict]: Evaluation result records.
     """
     recs = []
     try:
@@ -1025,7 +1312,7 @@ def _eval_prototype_alpha(X_sup, y_sup, K, label_names, text_embs_for_set, alpha
             X_sup_np = np.array(X_sup, dtype=np.float32)
 
         # Build prototypes (numpy)
-        prototypes_prompts = prototype_classifier_with_prompts(X_sup_np, y_sup, K, label_names, text_embs_for_set, alpha=alpha, mix_strategy=mix_strategy)
+        prototypes_prompts = prototype_classifier_with_prompts(X_sup_np, y_sup, K, label_names, text_embs_for_set, alpha=alpha)
         # prototypes_prompts is numpy (function returns numpy) -> convert to float32
         prot_cpu = torch.from_numpy(prototypes_prompts.astype(np.float32))
 
@@ -1035,9 +1322,9 @@ def _eval_prototype_alpha(X_sup, y_sup, K, label_names, text_embs_for_set, alpha
         # Evaluate on val/test using the pre-moved X_vl_gpu / X_te_gpu
         for split_name, X_gpu, y in [("val", X_vl_gpu, y_vl), ("test", X_te_gpu, y_te)]:
             # similarity and scaling
-            scores = (X_gpu @ prot_on_device.T) * float(temp)
+            scores = X_gpu @ prot_on_device.T
             yhat = torch.argmax(scores, axis=1).cpu().numpy()
-            recs = make_record(recs, shot, f"prototype+prompts", alpha, float(temp), prompt_set, 0.0, 0.0, mix_strategy, split_name, backbone, y, yhat, scores.cpu().numpy(), label_names)
+            recs = make_record(recs, shot, f"prototype+prompts", alpha, prompt_set, 0.0, 0.0, split_name, backbone, y, yhat, scores.cpu().numpy(), label_names)
     except Exception as e:
         print(f"[warn] prototype alpha eval failed: {e}")
     return recs
@@ -1050,13 +1337,35 @@ def _train_and_eval_linear_probe_with_prompts(
     X_te, y_te,
     label_names, text_embs_for_set, K,
     alpha, epochs, lr, batch_size, device, seed, compile_flag,
-    temp_grid, backbone, shot, prompt_set, weight_decay
+    backbone, shot, prompt_set, weight_decay
 ):
     """
-    Train linear probe with prompts pseudo-examples and evaluate across temps.
-    Returns list of record dicts (appends via make_record).
-    - Ensures all numpy arrays are converted to torch tensors BEFORE calling the model.
-    - Keeps evaluation inputs on the requested device.
+    Train a linear probe with text-augmented features.
+    
+    Thread-safe function for parallel execution. Trains a linear probe on mixed image+text features,
+    then evaluates on validation/test with scaling applied to logits.
+    
+    Args:
+        X_sup, y_sup: Support set embeddings and labels.
+        X_vl, y_vl: Validation set embeddings and labels.
+        X_te, y_te: Test set embeddings and labels.
+        label_names (List[str]): Class label names.
+        text_embs_for_set (Dict): Text embeddings for mixing.
+        K (int): Number of classes.
+        alpha (float): Image-text mixing weight.
+        epochs (int): Training epochs.
+        lr (float): Learning rate.
+        batch_size (int): Batch size.
+        device (str): Training device.
+        seed (int): Random seed.
+        compile_flag (bool): Whether to use torch.compile.
+        backbone (str): Model name for logging.
+        shot (int): Few-shot count for logging.
+        prompt_set (str): Prompt set name for logging.
+        weight_decay (float): Weight decay for optimizer.
+    
+    Returns:
+        List[Dict]: Evaluation result records for logits.
     """
     recs = []
     try:
@@ -1091,29 +1400,24 @@ def _train_and_eval_linear_probe_with_prompts(
                 y_true = y_arr.cpu().numpy()
             else:
                 y_true = np.asarray(y_arr)
+            yhat = logits_np.argmax(axis=1)
 
-            # ---- Temperature sweep ----
-            for temp in temp_grid:
-                logits_tp = logits_np * float(temp)
-                yhat = logits_tp.argmax(axis=1)
-
-                recs = make_record(
-                    recs,
-                    shot,
-                    "linear+prompts",
-                    alpha,
-                    temp,
-                    prompt_set,
-                    lr,
-                    weight_decay,
-                    "none",
-                    split_name,
-                    backbone,
-                    y_true,
-                    yhat,
-                    logits_tp,
-                    label_names
-                )
+            recs = make_record(
+                recs,
+                shot,
+                "linear+prompts",
+                alpha,
+                prompt_set,
+                lr,
+                weight_decay,
+                "none",
+                split_name,
+                backbone,
+                y_true,
+                yhat,
+                logits_np,
+                label_names
+            )
 
         _log(f"[{backbone}] FINISH linear+prompts shot={shot} prompt_set={prompt_set} alpha={alpha} lr={lr} wd={weight_decay} -> {len(recs)} records")
 
@@ -1131,6 +1435,27 @@ def _train_and_eval_linear_probe_with_prompts(
 def build_few_shot_prototypes_direct(labels: List[str], train_csv: str, shots: int, model, preprocess, device: str,
                                     cache_dir: str = DEFAULT_CACHE_DIR, root: str = ".", random_state: int = 42,
                                     show_progress: bool = False):
+    """
+    Build few-shot prototypes directly by encoding support samples.
+    
+    Samples support examples for each class, encodes them with the CLIP image encoder,
+    and computes class mean embeddings (prototypes).
+    
+    Args:
+        labels (List[str]): Class label names.
+        train_csv (str): Path to training CSV with [filepath, label] columns.
+        shots (int): Number of support samples per class.
+        model: CLIP image encoder model.
+        preprocess: CLIP preprocessing function.
+        device (str): Device for encoding.
+        cache_dir (str): Directory for image encoding cache.
+        root (str): Root directory for relative image paths.
+        random_state (int): Random seed for reproducible sampling.
+        show_progress (bool): Whether to show progress.
+    
+    Returns:
+        Dict[str, torch.Tensor]: Dictionary mapping label names to normalized prototype vectors.
+    """
     df_train = pd.read_csv(train_csv)
     try:
         with torch.no_grad():
@@ -1168,6 +1493,39 @@ def evaluate_prompts_and_few_shot_direct(labels: List[str], train_csv: str, spli
                                          delta_prompts_path: Optional[str] = None, pretrained: str = "openai",
                                          random_state: int = 42, cache_dir: str = DEFAULT_CACHE_DIR, root: str = ".",
                                          show_progress: bool = False):
+    """
+    End-to-end evaluation using direct image encoding and prompt-based classification.
+    
+    Encodes all test images and evaluates multiple classification strategies:
+    - Zero-shot with prompt mean embeddings
+    - Prompt pooling (averaged prompt embeddings)
+    - Few-shot prototypes (supports variable shot numbers)
+    - Linear probe baseline (trained on support examples)
+    
+    Args:
+        labels (List[str]): Class label names.
+        train_csv (str): Path to training set CSV.
+        split_csv (str): Path to evaluation set CSV.
+        shots (tuple): Few-shot shot counts to evaluate (default (1, 5, 10)).
+        model_name (str): CLIP model name.
+        device (str): Device for computation.
+        num_samples (Optional[int]): Limit number of test samples (for quick evaluation).
+        temp (float): Temperature for softmax in prompt pooling.
+        delta_prompts_path (Optional[str]): Path to custom prompts JSON.
+        pretrained (str): Pretrained weights source.
+        random_state (int): Random seed.
+        cache_dir (str): Cache directory for embeddings.
+        root (str): Root directory for image paths.
+        show_progress (bool): Whether to show progress bars.
+    
+    Returns:
+        Dict: Results containing:
+            - "n_samples": Number of test samples
+            - "delta_mean": Zero-shot accuracy with mean prompt embeddings
+            - "delta_pool": Accuracy with prompt pooling
+            - "few_shot_results": Dict mapping shot counts to accuracies
+            - "linear_probe": Linear probe baseline accuracy
+    """
     model, _, preprocess = open_clip.create_model_and_transforms(model_name, pretrained=pretrained, device=device)
     tokenizer = open_clip.get_tokenizer(model_name)
     try:
@@ -1268,6 +1626,19 @@ def evaluate_prompts_and_few_shot_direct(labels: List[str], train_csv: str, spli
 # CLI parsing & main
 # ------------------------------
 def parse_args():
+    """
+    Parse and return command-line arguments for the few-shot evaluation pipeline.
+    
+    Returns:
+        argparse.Namespace: Configuration object with fields for:
+            - Data paths (data_root, train/val/test CSVs, labels TSV)
+            - Model options (backbones, pretrained weights)
+            - Few-shot parameters (shots, alpha_grid, LR/WD grids)
+            - Prompt sets and mixing strategies
+            - Training options (epochs, batch size, device, CPU probes flag)
+            - Output directories (save_dir, results_dir)
+            - Advanced flags (direct_eval, fast, no_compile)
+    """
     ap = argparse.ArgumentParser(description="Unified few-shot + zero-shot evaluation for CLIP-style models (prompt-aware few-shot extensions)")
     ap.add_argument("--data-root", default=DATA_ROOT, help="Path to dataset root")
     ap.add_argument("--train-csv", default=TRAIN_CSV, help="Training CSV file")
@@ -1283,7 +1654,7 @@ def parse_args():
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--epochs", type=int, default=100)
-    ap.add_argument("--batch-size", type=int, default=BATTCH_SIZE)
+    ap.add_argument("--batch-size", type=int, default=BATCH_SIZE)
     ap.add_argument("--direct-eval", action="store_true", help="Run direct prompt-based evaluation (encodes images on the fly).")
     ap.add_argument("--num-samples", type=int, default=None, help="If using direct-eval, optionally subsample test set.")
     ap.add_argument("--temp", type=float, default=0.12, help="Temp for prompt pooling softmax")
@@ -1294,42 +1665,23 @@ def parse_args():
     ap.add_argument("--no-prompts-for-prototype", action="store_true", help="Disable text-prompt fusion for prototypes")
     ap.add_argument("--no-prompts-for-linear", action="store_true", help="Disable text-prompt pseudo-examples for linear probe")
     ap.add_argument("--alpha-grid", default=ALPHAS, help="Comma-separated list of prompt-alpha values to sweep over")
-    ap.add_argument("--temp-grid", default=TEMP_GRID, help="Comma-separated list of temperatures for logit scaling")
     ap.add_argument("--prompt-sets", default=PROMPT_SET, help="Comma-separated prompt sets to sweep")
     ap.add_argument("--lr-grid", default=LR_GRID, help="Comma-separated learning rates for linear probe")
     ap.add_argument("--wd-grid", default=WD_GRID, help="Comma-separated weight decay values for linear probe")
-    ap.add_argument("--mix-strategies", default=MIX_STRATEGIES, help="Comma-separated mixing strategies: normalize,none")
-    ap.add_argument("--fast", action="store_true", help="Use fast defaults (few epochs, single worker, small hyper grids)")
 
     args = ap.parse_args()
     args.use_prompts_for_prototype = not args.no_prompts_for_prototype
     args.use_prompts_for_linear = not args.no_prompts_for_linear
 
-    # Fast preset: override some defaults to make runs quick for debugging
-    if getattr(args, "fast", False):
-        args.epochs = 5
-        args.max_workers = 1
-        # shrink grids for a quick sweep
-        args.lr_grid = [1e-3]
-        args.wd_grid = [0.0]
-        args.alpha_grid = [0.5]
-        args.temp_grid = [1.0]
-        # reduce prompt sets to one
-        args.prompt_sets = ["ensemble"]
-
     # Ensure lists (argparse sometimes gives string)
     if isinstance(args.alpha_grid, str):
         args.alpha_grid = [float(x) for x in args.alpha_grid.split(",")]
-    if isinstance(args.temp_grid, str):
-        args.temp_grid = [float(x) for x in args.temp_grid.split(",")]
     if isinstance(args.lr_grid, str):
         args.lr_grid = [float(x) for x in args.lr_grid.split(",")]
     if isinstance(args.wd_grid, str):
         args.wd_grid = [float(x) for x in args.wd_grid.split(",")]
     if isinstance(args.prompt_sets, str):
         args.prompt_sets = args.prompt_sets.split(",")
-    if isinstance(args.mix_strategies, str):
-        args.mix_strategies = args.mix_strategies.split(",")
 
     # Make sure max_workers reasonable
     args.max_workers = max(1, int(min(args.max_workers, (os.cpu_count() or 4))))
@@ -1337,6 +1689,20 @@ def parse_args():
     return args
 
 def main():
+    """
+    Main entry point for few-shot evaluation pipeline.
+    
+    Orchestrates the full evaluation workflow:
+    1. Parses command-line arguments
+    2. Creates output directories
+    3. Loads class labels
+    4. Runs evaluations for each backbone (either direct or cached feature-based)
+    5. Saves results as JSON files
+    
+    Results are saved to:
+        - few_shot_overall_results.json: All evaluation records
+        - per_backbone JSON files: Direct evaluation results (if --direct-eval flag)
+    """
     args = parse_args()
     Path(args.results_dir).mkdir(parents=True, exist_ok=True)
     Path(args.save_dir).mkdir(parents=True, exist_ok=True)
@@ -1368,7 +1734,6 @@ def main():
                 model_name=backbone,
                 device=args.device,
                 num_samples=args.num_samples,
-                temp=args.temp,
                 delta_prompts_path=args.prompts_path,
                 pretrained=args.pretrained.get(backbone, "openai"),
                 random_state=args.seed,
@@ -1389,31 +1754,10 @@ def main():
             recs = evaluate_backbone(backbone, args, list(label_names), K, show_progress=show_progress)
             records_all.extend(recs)
 
-        out_overall_results = Path(args.results_dir) / "few_shot_table_all_backbones.csv"
-        out_class_results = Path(args.results_dir) / "few_shot_table_all_backbones.csv"
-        # with open(out_csv, "w", newline="", encoding="utf-8") as f:
-        #     w = csv.writer(f)
-        #     w.writerow([
-        #         "shot", "model", "alpha", "temp", "prompt_set",
-        #         "lr", "weight_decay", "mix_strategy",
-        #         "split", "backbone",
-        #         "top1", "top5", "balanced_acc", "macro_f1"
-        #     ])
-        #     for r in records_all:
-        #         w.writerow(r)
-        # print(f"Wrote results -> {out_csv}")
-
-        # --- NEW: Save overall results as JSON ---
         out_json = Path(args.results_dir) / "few_shot_overall_results.json"
         with open(out_json, "w", encoding="utf-8") as jf:
             json.dump(records_all, jf, indent=2)
         print(f"Wrote overall results -> {out_json}")
-
-        # # --- NEW: Save per-class results (already included inside each dict) ---
-        # out_json_pc = Path(args.results_dir) / "few_shot_per_class_results.json"
-        # with open(out_json_pc, "w", encoding="utf-8") as jf:
-        #     json.dump(records_all, jf, indent=2)
-        # print(f"Wrote per-class results -> {out_json_pc}")
 
 
 if __name__ == "__main__":
