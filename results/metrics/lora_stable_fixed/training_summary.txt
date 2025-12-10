@@ -1,0 +1,8 @@
+Training Summary - Fixed Version
+==================================================
+
+Best Top-1 Accuracy: 0.8884
+Best Top-5 Accuracy: 0.9723
+Best Balanced Accuracy: 0.8638
+Best Macro F1: 0.8606
+Final Epoch: 200
