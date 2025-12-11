@@ -354,8 +354,10 @@ def predict(image_path):
     mixed_feats = torch.cat(mixed_feats, dim=0).unsqueeze(0)  # [1, K, dim]
 
     with torch.no_grad():
-        logits = linear_head(mixed_feats.squeeze(0))
-        pred = logits.argmax().item()
+        logits = linear_head(mixed_feats.squeeze(0))  # [K, K]
+        # one score per class: classifier c evaluated on feature mixed for class c
+        logits_per_class = torch.diag(logits)        # [K]
+        pred = logits_per_class.argmax().item()
 
     return label_names[pred]
 
