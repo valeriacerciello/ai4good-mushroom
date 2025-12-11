@@ -2,7 +2,7 @@
 Header for train_best_model.py
 """
 
-from scripts.few_shots.import_n_config.shared_imports import *
+from scripts.few_shots.import_n_config.shared_setup import *
 from scripts.few_shots.import_n_config.constants import (
     FINAL_BACKBONE, FINAL_PRETRAINED, FINAL_MODEL_TYPE,
     FINAL_SHOTS, FINAL_PROMPT_SET,
