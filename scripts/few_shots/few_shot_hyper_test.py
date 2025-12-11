@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
 # ===== HARD DISABLE TORCH DYNAMO BEFORE ANY PYTORCH IMPORTS =====
+
+
 import os
 os.environ["TORCHDYNAMO_DISABLE"] = "1"
-
+import hashlib
+import torch.nn.functional as F
 import torch._dynamo
 torch._dynamo.disable()
 torch._dynamo.config.suppress_errors = True
@@ -1647,7 +1650,13 @@ def parse_args():
     ap.add_argument("--labels", default=LABELS, help="TSV with id\tlabel_name")
     ap.add_argument("--prompts-path", default=DEFAULT_PROMPTS_JSON)
     ap.add_argument("--backbones", nargs="+",default=[b for b in DEFAULT_PRETRAINED.keys()], help="Model backbones to use (default uses DEFAULT_BACKBONES values).")
-    ap.add_argument("--pretrained",nargs="+", default=[DEFAULT_PRETRAINED.get(b, "openai") for b in DEFAULT_PRETRAINED.keys()], help="Pretrained weights for each backbone (default uses DEFAULT_PRETRAINED map).")
+    #ap.add_argument("--pretrained",nargs="+", default=[DEFAULT_PRETRAINED.get(b, "openai") for b in DEFAULT_PRETRAINED.keys()], help="Pretrained weights for each backbone (default uses DEFAULT_PRETRAINED map).")
+    ap.add_argument(
+    "--pretrained",
+    nargs="+",
+    default=None,
+    help="Pretrained weights for each backbone; if omitted, uses DEFAULT_PRETRAINED map."
+)
     ap.add_argument("--shots", nargs="+", type=int, default=SHOTS)
     ap.add_argument("--save-dir", default=DEFAULT_CACHE_DIR)
     ap.add_argument("--results-dir", default=RESULTS_DIR)
@@ -1707,13 +1716,19 @@ def main():
     Path(args.results_dir).mkdir(parents=True, exist_ok=True)
     Path(args.save_dir).mkdir(parents=True, exist_ok=True)
 
-    pretrained_map = {}
-    for b in args.backbones:
-        if hasattr(args, "pretrained") and args.pretrained and len(args.pretrained) > 0:
-            idx = args.backbones.index(b)
-            pretrained_map[b] = args.pretrained[idx] if idx < len(args.pretrained) else DEFAULT_PRETRAINED.get(b, "openai")
+    # Build a dict backbone -> pretrained tag
+    if not args.pretrained:
+        # No explicit tags: use the DEFAULT_PRETRAINED map
+        pretrained_map = {b: DEFAULT_PRETRAINED.get(b, "openai") for b in args.backbones}
+    else:
+        # Explicit tags supplied: align with backbones positionally
+        if len(args.pretrained) == 1 and len(args.backbones) > 1:
+            # Allow broadcasting a single tag to all backbones
+            pretrained_map = {b: args.pretrained[0] for b in args.backbones}
         else:
-            pretrained_map[b] = DEFAULT_PRETRAINED.get(b, "openai")
+            pretrained_map = {}
+            for b, tag in zip(args.backbones, args.pretrained):
+                pretrained_map[b] = tag
     args.pretrained = pretrained_map
 
     label_names, name2id = load_labels(args.labels)
