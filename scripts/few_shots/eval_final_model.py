@@ -124,7 +124,6 @@ def load_final_model():
     )
     clip_model.eval()
 
-    # --- FIX: normalize image_size ---
     try:
         image_size = clip_model.visual.image_size
     except:
@@ -134,7 +133,6 @@ def load_final_model():
     if isinstance(image_size, int):
         H = W = image_size
     elif isinstance(image_size, (tuple, list)):
-        # Some models provide (H, W)
         if len(image_size) == 1:
             H = W = image_size[0]
         else:
@@ -164,9 +162,6 @@ def load_final_model():
 
     linear_head.load_state_dict(fixed_state)
     linear_head.eval()
-    
-    
-
 
     # Load cached text embeddings
     text_embs = get_text_embeddings(
@@ -361,7 +356,6 @@ def predict(image_path):
         # one score per class: classifier c evaluated on feature mixed for class c
         logits_per_class = torch.diag(logits)        # [K]
         pred = logits_per_class.argmax().item()
-
         # compute confidence via softmax
         probs = torch.softmax(logits_per_class, dim=0)
         confidence = probs[pred].item()

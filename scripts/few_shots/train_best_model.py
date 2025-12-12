@@ -83,11 +83,11 @@ def train_final_model():
     7. Saves model checkpoint
     
     The final model uses:
-        - Backbone: FINAL_BACKBONE (ViT-B-32-quickgelu)
+        - Backbone: FINAL_BACKBONE (b32 or bigG)
         - Prompt Set: FINAL_PROMPT_SET (delta)
         - Few-shot Samples: FINAL_SHOTS (100)
         - Learning Rate: FINAL_LR (0.03)
-        - Weight Decay: FINAL_WD (0.0)
+        - Weight Decay: FINAL_WD (0 or 1e-4)
     
     Output checkpoint saved to SAVE_PATH contains:
         - linear_head state_dict
