@@ -14,13 +14,6 @@ We study CLIP and BLIP on a balanced dataset of **169 mushroom species** and bui
 - BLIP and LoRA baselines  
 - Qualitative analysis and error diagnostics  
 
-The entire pipeline is documented and reproducible.
-
-For script-level details see:
-
-- `SCRIPTS_OVERVIEW.md`  
-- `PIPELINE_OVERVIEW.md` (diagram of the whole system)
-
 ---
 
 ## Quickstart: reproduce the final model
@@ -32,7 +25,6 @@ From a clean clone, the **minimal path** to the final model is:
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-pip install -r requirements_blipclip.txt
 
 # 1. Make sure the dataset is available (see Section 1 below)
 
@@ -95,10 +87,6 @@ Train/validation/test splits are stored in splits/:
 
 A consistent label mapping is provided by:
 - data_prompts_label/labels.tsv
-
-Note: BLIP captions, attributes and prompts are already precomputed
-and stored in `data/.` You do not need to re-run BLIP to reproduce
-the main CLIP results.
 
 ⸻
 
