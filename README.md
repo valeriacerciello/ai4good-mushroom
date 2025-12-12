@@ -290,16 +290,12 @@ only and is not required to reproduce our main experiments.
 
 ```text
 .
-├── SCRIPTS_OVERVIEW.md           # Script-by-script documentation
-├── PIPELINE_OVERVIEW.md          # Diagram of the entire pipeline
 ├── scripts/                      # All runnable scripts (zero-shot, few-shot, BLIP, LoRA)
 ├── code/                         # Helper code (evaluation, plotting, resnet training, prompts)
-├── data/                         # BLIP attributes and prompt JSONs
-├── data_prompts_label/           # Label mapping + delta prompts
-├── splits/                       # Train/val/test CSV splits
+├── data_prompts_label/           # Label mapping + delta prompts (Generated or downloaded from one drive)
+├── splits/                       # Train/val/test CSV splits (Generated or downloaded from one drive)
 ├── features/                     # Cached CLIP image / text features (generated)
-├── results/                      # Metrics, confusion matrices, qualitative figures
-├── src/                          # Utilities (e.g., caption cleaning)
+├── results/                      # Metrics, confusion matrices, qualitative figures (Generated or downloaded)
 └── external/ecovision_mushroom/  # Original baseline repo (reference only)
 ```
 
