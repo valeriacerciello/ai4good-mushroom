@@ -319,13 +319,16 @@ def predict(image_path):
     Run inference on a single image and return predicted mushroom class.
     
     Combines CLIP image encoding with per-class text embeddings using learned alpha values.
-    Predicts the class with highest logit from the linear head.
+    Predicts the class with highest logit from the linear head, and returns the a 
+    confidence value which is computed by applying a softmax over all class logits
+    and returning the probability corresponding to the predicted class.
     
     Args:
         image_path (str): Path to image file to classify.
     
     Returns:
         str: Predicted mushroom class label.
+        float: Confidence score (softmax probability) for the prediction.
     """
     clip_model, preprocess, linear_head, label_names, alpha_dict, text_embs, _, _ = load_final_model()
 
@@ -359,7 +362,11 @@ def predict(image_path):
         logits_per_class = torch.diag(logits)        # [K]
         pred = logits_per_class.argmax().item()
 
-    return label_names[pred]
+        # compute confidence via softmax
+        probs = torch.softmax(logits_per_class, dim=0)
+        confidence = probs[pred].item()
+
+    return label_names[pred], confidence
 
 
 ###############################################################################
@@ -387,8 +394,8 @@ def main():
     # Run both if specified, otherwise default to evaluation if neither is specified
     if args.predict:
         print(f"Predicting label for image: {args.predict}")
-        label = predict(args.predict)
-        print("\nPrediction:", label)
+        label, confidence = predict(args.predict)
+        print(f"\nPrediction: {label}; Confidence = {confidence:.4f} ({confidence*100:.2f}%)")
     
     if args.eval or (not args.predict and not args.eval):
         # Run evaluation if --eval is specified or if no arguments are provided
