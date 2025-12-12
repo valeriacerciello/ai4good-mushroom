@@ -168,7 +168,7 @@ def main():
     # model
     clip_model = build_clip_with_lora(DEVICE)
 
-    # load checkpoint (simple)
+    # load checkpoint 
     if not os.path.exists(CKPT_PATH):
         raise FileNotFoundError(f"Checkpoint not found: {CKPT_PATH}")
     ckpt = torch.load(CKPT_PATH, map_location=DEVICE, weights_only=False)
@@ -185,7 +185,7 @@ def main():
 
     clip_model.load_state_dict(state, strict=False)
 
-    # load text_features (assume saved)
+    # load text_features
     if isinstance(ckpt, dict) and 'text_features' in ckpt:
         text_features = ckpt['text_features'].to(DEVICE)
     else:
