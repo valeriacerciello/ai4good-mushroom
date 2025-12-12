@@ -218,6 +218,7 @@ data/**
 # model artifacts & results
 features/**
 features.zip
+features.part.*
 results/**
 lightning_logs/**
 wandb/**
@@ -269,3 +270,4 @@ results/**
 lora_stable_fixed_b32/training_log.csv
 lora_stable_fixed_meta/training_log.csv
 lora_stable_fixed_b32/best_model.pth
+features.part.aa
