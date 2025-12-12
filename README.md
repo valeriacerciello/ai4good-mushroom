@@ -290,6 +290,7 @@ only and is not required to reproduce our main experiments.
 
 ```text
 .
+├── _legacies/                    # Early work iterations
 ├── scripts/                      # All runnable scripts (zero-shot, few-shot, BLIP, LoRA)
 ├── code/                         # Helper code (evaluation, plotting, resnet training, prompts)
 ├── data_prompts_label/           # Label mapping + delta prompts (Generated or downloaded from one drive)
