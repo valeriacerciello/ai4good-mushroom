@@ -66,7 +66,6 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements.txt
-pip install -r requirements_blipclip.txt
 ```
 
 Most experiments are designed to run on a GPU cluster.
@@ -290,7 +289,7 @@ only and is not required to reproduce our main experiments.
 
 ```text
 .
-├── _legacies/                    # Early work iterations
+├── _legacy/                      # Early work iterations
 ├── scripts/                      # All runnable scripts (zero-shot, few-shot, BLIP, LoRA)
 ├── code/                         # Helper code (evaluation, plotting, resnet training, prompts)
 ├── data_prompts_label/           # Label mapping + delta prompts (Generated or downloaded from one drive)
