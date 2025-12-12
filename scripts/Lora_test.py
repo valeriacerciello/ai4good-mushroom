@@ -29,8 +29,9 @@ from peft import LoraConfig, get_peft_model
 # ======================user settings=============================
 ROOT_MUSHROOM = "/zfs/ai4good/datasets/mushroom"
 TEST_CSV = os.path.join(ROOT_MUSHROOM, "test.csv")
-CHECKPOINT_DIR = "lora_stable_fixed"
+CHECKPOINT_DIR = "lora_stable_fixed_b32"
 CKPT_PATH = os.path.join(CHECKPOINT_DIR, "best_model.pth")
+MERGED_DATA = "/zfs/ai4good/datasets/mushroom/merged_dataset"
 
 BATCH_SIZE = 128           # smaller default to be safe
 NUM_WORKERS = 4
@@ -89,7 +90,7 @@ class FixedMushroomDataset(Dataset):
             img_path = str(row['path'])
             label_name = str(row['label'])
             filename = os.path.basename(img_path)
-            full_path = os.path.join("/zfs/ai4good/datasets/mushroom/merged_dataset", label_name, filename)
+            full_path = os.path.join(MERGED_DATA, label_name, filename)
             if full_path and os.path.exists(full_path):
                 self.data.append((full_path, self.class_to_idx[label_name]))
             else:

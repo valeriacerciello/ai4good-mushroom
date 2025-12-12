@@ -266,3 +266,6 @@ results/**
 !data/prompts/class_prompts_attr.json
 !data/prompts/class_prompts_enriched.json
 
+lora_stable_fixed_b32/training_log.csv
+lora_stable_fixed_meta/training_log.csv
+lora_stable_fixed_b32/best_model.pth

@@ -99,20 +99,18 @@ except Exception:
 torch.set_float32_matmul_precision('high')
 
 DEFAULT_PRETRAINED = {
-    "PE-Core-bigG-14-448": "meta",
-    "ViT-gopt-16-SigLIP2-384": "webli",
-    "ViT-H-14-378-quickgelu": "dfn5b",
+    # "PE-Core-bigG-14-448": "meta",
+    # "ViT-gopt-16-SigLIP2-384": "webli",
+    # "ViT-H-14-378-quickgelu": "dfn5b",
     "ViT-B-32-quickgelu": "openai",
-    "ViT-L-14": "openai",
-    "ViT-B-16": "openai",
+    # "ViT-L-14": "openai",
+    # "ViT-B-16": "openai",
 }
-SHOTS = [0, 1, 5, 10, 20, 50, 100]
-ALPHAS = [0.0,0.2,0.4,0.6,0.8,1.0]
-TEMP_GRID = [1] #,5,10,20,50,100]
-PROMPT_SET = ["ensemble", "v1", "names", "delta"]
-LR_GRID = [1e-3, 3e-3, 3e-2, 3e-1]
-WD_GRID = [0,1e-4,5e-4]
-MIX_STRATEGIES = ["none"]# ["normalize","none"]
+SHOTS = [5]# [0, 1, 5, 10, 20, 50, 100]
+ALPHAS = [0.8]#[0.0,0.2,0.4,0.6,0.8,1.0]
+PROMPT_SET = ["delta"]#["ensemble", "v1", "names", "delta"]
+LR_GRID = [3e-1]#[1e-3, 3e-3, 3e-2, 3e-1]
+WD_GRID = [1e-4]#[0,1e-4,5e-4]
 
 WORK_ENV = "/home/c/dkorot/AI4GOOD"
 DATA_ROOT = WORK_ENV + "/provided_dir/datasets/mushroom/merged_dataset"
@@ -120,7 +118,7 @@ TRAIN_CSV = WORK_ENV + "/ai4good-mushroom/splits/train.csv"
 VAL_CSV = WORK_ENV + "/ai4good-mushroom/splits/val.csv"
 TEST_CSV = WORK_ENV + "/ai4good-mushroom/splits/test.csv"
 LABELS = WORK_ENV + "/ai4good-mushroom/data_prompts_label/labels.tsv"
-RESULTS_DIR = WORK_ENV + "/ai4good-mushroom/results"
+RESULTS_DIR = WORK_ENV + "/ai4good-mushroom/results_test"
 DEFAULT_CACHE_DIR = "/zfs/ai4good/student/dkorot/ai4good-mushroom/features"
 DEFAULT_PROMPTS_JSON = WORK_ENV + "/ai4good-mushroom/data_prompts_label/delta_prompts.json"
 
@@ -425,11 +423,9 @@ def make_record(
     shot,
     model,
     alpha,
-    temp,
     prompt_set,
     lr,
     weight_decay,
-    mix_strategy,
     split_name,
     backbone,
     y_true,
@@ -451,11 +447,9 @@ def make_record(
     "shot": shot,
     "model": model,    # e.g. "prototype" or "linear"
     "alpha": alpha,
-    "temp": temp,
     "prompt_set": prompt_set,
     "lr": lr,
     "weight_decay": weight_decay,
-    "mix_strategy": mix_strategy,
     "split": split_name,
     "backbone": backbone,
     "top1": float(top1),
@@ -484,7 +478,7 @@ def prototype_classifier(X_support: np.ndarray, y_support: np.ndarray, K: int) -
 
 def prototype_classifier_with_prompts(X_support: np.ndarray, y_support: np.ndarray, K: int,
                                       label_names: List[str], text_embs: Dict[str, Any],
-                                      alpha: float = 0.5, mix_strategy: str = 'normalize') -> np.ndarray:
+                                      alpha: float = 0.5) -> np.ndarray:
     D = X_support.shape[1]
     prototypes = np.zeros((K, D), dtype=np.float32)
     for k in range(K):
@@ -511,10 +505,6 @@ def prototype_classifier_with_prompts(X_support: np.ndarray, y_support: np.ndarr
                 txt_proto = txt_proto / n
 
         combined = alpha * img_proto + (1.0 - alpha) * txt_proto
-        if mix_strategy == 'normalize':
-            n = np.linalg.norm(combined)
-            if n > 0:
-                combined = combined / n
         prototypes[k] = combined
     return prototypes
 
@@ -902,39 +892,43 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
         # ---- Continue prototype sweeps unchanged ----
         prototype_tasks = []
 
-        
-        # Efficient execution of prototype alpha sweeps in parallel across alphas
-        if prototype_tasks:
-            # Number of threads: limit to args.max_workers but also avoid more than needed
-            max_workers = min(args.max_workers, max(1, (os.cpu_count() or 4) // 2))
-            # If the main device is gpu and users didn't enable cpu_probes, still safe to CPU-parallelize these (they use numpy/text_embs)
-            with ThreadPoolExecutor(max_workers=max_workers) as ex:
-                futures = []
-                future_to_job = {}
-                for (prompt_set, mix_strategy, temp, text_embs_for_set, X_sup_loc, y_sup_loc) in prototype_tasks:
-                    # For each alpha, spawn tasks for all alphas (alpha loop is independent)
-                    for alpha in args.alpha_grid:
-                        job_desc = f"prototype+prompts shot={shot} prompt_set={prompt_set} alpha={alpha} mix={mix_strategy} temp={temp}"
-                        _log(f"[{backbone}] SUBMIT {job_desc}")
-                        fut = ex.submit(_eval_prototype_alpha,
-                                         X_sup_loc, y_sup_loc, K,
-                                         list(label_names), text_embs_for_set, alpha, mix_strategy, temp,
-                                         X_vl_gpu, y_vl, X_te_gpu, y_te, backbone, shot, prompt_set)
-                        futures.append(fut)
-                        future_to_job[fut] = job_desc
+        if args.use_prompts_for_prototype:
+            for prompt_set in args.prompt_sets:
+                text_embs_for_set = text_embs_bundles.get(prompt_set)
+                if text_embs_for_set is None:
+                    continue
+                # Efficient execution of prototype alpha sweeps in parallel across alphas
+                if prototype_tasks:
+                    # Number of threads: limit to args.max_workers but also avoid more than needed
+                    max_workers = min(args.max_workers, max(1, (os.cpu_count() or 4) // 2))
+                    # If the main device is gpu and users didn't enable cpu_probes, still safe to CPU-parallelize these (they use numpy/text_embs)
+                    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+                        futures = []
+                        future_to_job = {}
+                        # for (prompt_set, X_sup_loc, y_sup_loc) in prototype_tasks:
+                        # For each alpha, spawn tasks for all alphas (alpha loop is independent)
+                        for alpha in args.alpha_grid:
+                            job_desc = f"prototype+prompts shot={shot} prompt_set={prompt_set} alpha={alpha}"
+                            _log(f"[{backbone}] SUBMIT {job_desc}")
+                            fut = ex.submit(_eval_prototype_alpha,
+                                            X_sup, y_sup, K,
+                                            list(label_names), text_embs_for_set, alpha,
+                                            X_vl_gpu, y_vl, X_te_gpu, y_te, backbone, shot, prompt_set)
+                            futures.append(fut)
+                            future_to_job[fut] = job_desc
 
-                # collect results
-                for fut in as_completed(futures):
-                    job = future_to_job.get(fut, "unknown")
-                    try:
-                        recs = fut.result()
-                        _log(f"[{backbone}] DONE {job} -> {len(recs)} records")
-                        # recs is a list of record tuples to append
-                        records.extend(recs)
-                    except Exception as e:
-                        _log(f"[{backbone}] ERROR {job}: {e}")
+                        # collect results
+                        for fut in as_completed(futures):
+                            job = future_to_job.get(fut, "unknown")
+                            try:
+                                recs = fut.result()
+                                _log(f"[{backbone}] DONE {job} -> {len(recs)} records")
+                                # recs is a list of record tuples to append
+                                records.extend(recs)
+                            except Exception as e:
+                                _log(f"[{backbone}] ERROR {job}: {e}")
 
-        # Prompt-aware linear probe sweep
+        # Prompt-aware probe sweep
         if args.use_prompts_for_linear:
             # We'll iterate prompt_set -> alpha -> lr -> wd. We parallelize (lr,wd) if probe_device == 'cpu'
             for prompt_set in args.prompt_sets:
@@ -972,7 +966,6 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
                                     probe_device,
                                     args.seed + int(shot),
                                     args.no_compile,
-                                    args.temp_grid,
                                     backbone,
                                     shot,
                                     prompt_set,
@@ -998,7 +991,7 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
                                     X_sup, y_sup, X_vl, y_vl,
                                         X_te, y_te, list(label_names), text_embs_for_set, K,
                                     alpha, args.epochs, lr, args.batch_size, probe_device,
-                                    args.seed + int(shot), args.no_compile, args.temp_grid, backbone, shot, prompt_set, wd)
+                                    args.seed + int(shot), args.no_compile, backbone, shot, prompt_set, wd)
                                 _log(f"[{backbone}] DONE {job_desc} -> {len(recs)} records")
                                 records.extend(recs)
                             except Exception as e:
@@ -1007,7 +1000,7 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
     return records
 
 
-def _eval_prototype_alpha(X_sup, y_sup, K, label_names, text_embs_for_set, alpha, mix_strategy, temp,
+def _eval_prototype_alpha(X_sup, y_sup, K, label_names, text_embs_for_set, alpha,
                           X_vl_gpu, y_vl, X_te_gpu, y_te, backbone, shot, prompt_set):
     """
     Evaluate a single alpha value for prototype+prompts combination.
@@ -1017,7 +1010,7 @@ def _eval_prototype_alpha(X_sup, y_sup, K, label_names, text_embs_for_set, alpha
     """
     recs = []
     try:
-        _log(f"[{backbone}] START linear+prompts shot={shot} prompt_set={prompt_set} alpha={alpha} lr={lr} wd={weight_decay}")
+        _log(f"[{backbone}] START prototype+prompts shot={shot} prompt_set={prompt_set} alpha={alpha}")
         # Ensure inputs are on CPU numpy arrays (they may be numpy already)
         if isinstance(X_sup, torch.Tensor):
             X_sup_np = X_sup.cpu().numpy()
@@ -1025,7 +1018,7 @@ def _eval_prototype_alpha(X_sup, y_sup, K, label_names, text_embs_for_set, alpha
             X_sup_np = np.array(X_sup, dtype=np.float32)
 
         # Build prototypes (numpy)
-        prototypes_prompts = prototype_classifier_with_prompts(X_sup_np, y_sup, K, label_names, text_embs_for_set, alpha=alpha, mix_strategy=mix_strategy)
+        prototypes_prompts = prototype_classifier_with_prompts(X_sup_np, y_sup, K, label_names, text_embs_for_set, alpha=alpha)
         # prototypes_prompts is numpy (function returns numpy) -> convert to float32
         prot_cpu = torch.from_numpy(prototypes_prompts.astype(np.float32))
 
@@ -1035,9 +1028,9 @@ def _eval_prototype_alpha(X_sup, y_sup, K, label_names, text_embs_for_set, alpha
         # Evaluate on val/test using the pre-moved X_vl_gpu / X_te_gpu
         for split_name, X_gpu, y in [("val", X_vl_gpu, y_vl), ("test", X_te_gpu, y_te)]:
             # similarity and scaling
-            scores = (X_gpu @ prot_on_device.T) * float(temp)
+            scores = (X_gpu @ prot_on_device.T)
             yhat = torch.argmax(scores, axis=1).cpu().numpy()
-            recs = make_record(recs, shot, f"prototype+prompts", alpha, float(temp), prompt_set, 0.0, 0.0, mix_strategy, split_name, backbone, y, yhat, scores.cpu().numpy(), label_names)
+            recs = make_record(recs, shot, f"prototype+prompts", alpha, prompt_set, 0.0, 0.0, split_name, backbone, y, yhat, scores.cpu().numpy(), label_names)
     except Exception as e:
         print(f"[warn] prototype alpha eval failed: {e}")
     return recs
@@ -1050,7 +1043,7 @@ def _train_and_eval_linear_probe_with_prompts(
     X_te, y_te,
     label_names, text_embs_for_set, K,
     alpha, epochs, lr, batch_size, device, seed, compile_flag,
-    temp_grid, backbone, shot, prompt_set, weight_decay
+    backbone, shot, prompt_set, weight_decay
 ):
     """
     Train linear probe with prompts pseudo-examples and evaluate across temps.
@@ -1092,28 +1085,23 @@ def _train_and_eval_linear_probe_with_prompts(
             else:
                 y_true = np.asarray(y_arr)
 
-            # ---- Temperature sweep ----
-            for temp in temp_grid:
-                logits_tp = logits_np * float(temp)
-                yhat = logits_tp.argmax(axis=1)
 
-                recs = make_record(
-                    recs,
-                    shot,
-                    "linear+prompts",
-                    alpha,
-                    temp,
-                    prompt_set,
-                    lr,
-                    weight_decay,
-                    "none",
-                    split_name,
-                    backbone,
-                    y_true,
-                    yhat,
-                    logits_tp,
-                    label_names
-                )
+            yhat = logits_np.argmax(axis=1)
+            recs = make_record(
+                recs,
+                shot,
+                "linear+prompts",
+                alpha,
+                prompt_set,
+                lr,
+                weight_decay,
+                split_name,
+                backbone,
+                y_true,
+                yhat,
+                logits_np,
+                label_names
+            )
 
         _log(f"[{backbone}] FINISH linear+prompts shot={shot} prompt_set={prompt_set} alpha={alpha} lr={lr} wd={weight_decay} -> {len(recs)} records")
 
@@ -1164,7 +1152,7 @@ def build_few_shot_prototypes_direct(labels: List[str], train_csv: str, shots: i
 
 def evaluate_prompts_and_few_shot_direct(labels: List[str], train_csv: str, split_csv: str, shots=(1, 5, 10),
                                          model_name: str = "ViT-B-32", device: str = "cuda",
-                                         num_samples: Optional[int] = None, temp: float = 0.12,
+                                         num_samples: Optional[int] = None,
                                          delta_prompts_path: Optional[str] = None, pretrained: str = "openai",
                                          random_state: int = 42, cache_dir: str = DEFAULT_CACHE_DIR, root: str = ".",
                                          show_progress: bool = False):
@@ -1294,42 +1282,24 @@ def parse_args():
     ap.add_argument("--no-prompts-for-prototype", action="store_true", help="Disable text-prompt fusion for prototypes")
     ap.add_argument("--no-prompts-for-linear", action="store_true", help="Disable text-prompt pseudo-examples for linear probe")
     ap.add_argument("--alpha-grid", default=ALPHAS, help="Comma-separated list of prompt-alpha values to sweep over")
-    ap.add_argument("--temp-grid", default=TEMP_GRID, help="Comma-separated list of temperatures for logit scaling")
     ap.add_argument("--prompt-sets", default=PROMPT_SET, help="Comma-separated prompt sets to sweep")
     ap.add_argument("--lr-grid", default=LR_GRID, help="Comma-separated learning rates for linear probe")
     ap.add_argument("--wd-grid", default=WD_GRID, help="Comma-separated weight decay values for linear probe")
-    ap.add_argument("--mix-strategies", default=MIX_STRATEGIES, help="Comma-separated mixing strategies: normalize,none")
     ap.add_argument("--fast", action="store_true", help="Use fast defaults (few epochs, single worker, small hyper grids)")
 
     args = ap.parse_args()
     args.use_prompts_for_prototype = not args.no_prompts_for_prototype
     args.use_prompts_for_linear = not args.no_prompts_for_linear
 
-    # Fast preset: override some defaults to make runs quick for debugging
-    if getattr(args, "fast", False):
-        args.epochs = 5
-        args.max_workers = 1
-        # shrink grids for a quick sweep
-        args.lr_grid = [1e-3]
-        args.wd_grid = [0.0]
-        args.alpha_grid = [0.5]
-        args.temp_grid = [1.0]
-        # reduce prompt sets to one
-        args.prompt_sets = ["ensemble"]
-
     # Ensure lists (argparse sometimes gives string)
     if isinstance(args.alpha_grid, str):
         args.alpha_grid = [float(x) for x in args.alpha_grid.split(",")]
-    if isinstance(args.temp_grid, str):
-        args.temp_grid = [float(x) for x in args.temp_grid.split(",")]
     if isinstance(args.lr_grid, str):
         args.lr_grid = [float(x) for x in args.lr_grid.split(",")]
     if isinstance(args.wd_grid, str):
         args.wd_grid = [float(x) for x in args.wd_grid.split(",")]
     if isinstance(args.prompt_sets, str):
         args.prompt_sets = args.prompt_sets.split(",")
-    if isinstance(args.mix_strategies, str):
-        args.mix_strategies = args.mix_strategies.split(",")
 
     # Make sure max_workers reasonable
     args.max_workers = max(1, int(min(args.max_workers, (os.cpu_count() or 4))))
@@ -1391,30 +1361,12 @@ def main():
 
         out_overall_results = Path(args.results_dir) / "few_shot_table_all_backbones.csv"
         out_class_results = Path(args.results_dir) / "few_shot_table_all_backbones.csv"
-        # with open(out_csv, "w", newline="", encoding="utf-8") as f:
-        #     w = csv.writer(f)
-        #     w.writerow([
-        #         "shot", "model", "alpha", "temp", "prompt_set",
-        #         "lr", "weight_decay", "mix_strategy",
-        #         "split", "backbone",
-        #         "top1", "top5", "balanced_acc", "macro_f1"
-        #     ])
-        #     for r in records_all:
-        #         w.writerow(r)
-        # print(f"Wrote results -> {out_csv}")
 
         # --- NEW: Save overall results as JSON ---
         out_json = Path(args.results_dir) / "few_shot_overall_results.json"
         with open(out_json, "w", encoding="utf-8") as jf:
             json.dump(records_all, jf, indent=2)
         print(f"Wrote overall results -> {out_json}")
-
-        # # --- NEW: Save per-class results (already included inside each dict) ---
-        # out_json_pc = Path(args.results_dir) / "few_shot_per_class_results.json"
-        # with open(out_json_pc, "w", encoding="utf-8") as jf:
-        #     json.dump(records_all, jf, indent=2)
-        # print(f"Wrote per-class results -> {out_json_pc}")
-
 
 if __name__ == "__main__":
     main()

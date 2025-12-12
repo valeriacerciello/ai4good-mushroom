@@ -29,14 +29,23 @@ import numpy as np
 import json
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 from collections import defaultdict, Counter
+from torch.amp import autocast
 
 from torchvision import set_image_backend # conda install accimage
 set_image_backend('accimage')
 
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["PYTORCH_ALLOC_CONF"] = "garbage_collection_threshold:0.6,max_split_size_mb:512,enable_expandable_segments:true"
 torch.backends.cudnn.benchmark = True
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
+torch.cuda.empty_cache()
+torch.backends.cuda.matmul.allow_fp16_reduced_precision_reduction = True
+torch.cuda.set_per_process_memory_fraction(1.0)
+torch.cuda.memory.set_per_process_memory_fraction(1.0)
+# torch.cuda.set_allocator_settings("max_split_size_mb:128")
+
 #reduce tokenizer parallelism noise and enable cudnn benchmark when available
 ##### ======================================================setting==========================================
 #paths
@@ -45,14 +54,14 @@ TRAIN_CSV = os.path.join(ROOT_MUSHROOM, "train.csv")
 VAL_CSV = os.path.join(ROOT_MUSHROOM, "val.csv")
 TEST_CSV = os.path.join(ROOT_MUSHROOM, "test.csv")
 PROMPT_PATH = "/zfs/ai4good/student/dkorot/ai4good-mushroom/data_prompts_label/delta_prompts.json"
-CHECKPOINT_DIR = "lora_stable_fixed_b32"
+CHECKPOINT_DIR = "lora_stable_fixed_meta"
 MERGED_DATA = "/zfs/ai4good/datasets/mushroom/merged_dataset"
-
 #limits and performance
 MAX_TRAIN_SAMPLES = 200000
 MAX_VAL_SAMPLES = 20000
-BATCH_SIZE = 520
-NUM_WORKERS = 64
+BATCH_SIZE = 16
+GRAD_ACCUM_STEPS = 32
+NUM_WORKERS = 24
 
 #hyperparameters
 MAX_EPOCHS = 200
@@ -61,30 +70,45 @@ LORA_R = 128
 LORA_ALPHA = 256
 LORA_DROPOUT = 0.1
 
-Lora_target_modules = [
-    "visual.transformer.resblocks.10.attn.in_proj",
-    "visual.transformer.resblocks.10.attn.out_proj",
-    "visual.transformer.resblocks.11.attn.in_proj",
-    "visual.transformer.resblocks.11.attn.out_proj",
-    "visual.transformer.resblocks.10.mlp.c_fc",
-    "visual.transformer.resblocks.10.mlp.c_proj",
-    "visual.transformer.resblocks.11.mlp.c_fc",
-    "visual.transformer.resblocks.11.mlp.c_proj",
-]
+MODEL_NAME = "PE-Core-bigG-14-448"
+PRETRAINED_CHECKPOINT = "meta"
+
+
+
 #only use layer 10-11
+# lora_target_modules = [
+#     "visual.transformer.resblocks.10.attn.in_proj",
+#     "visual.transformer.resblocks.10.attn.out_proj",
+#     "visual.transformer.resblocks.11.attn.in_proj",
+#     "visual.transformer.resblocks.11.attn.out_proj",
+#     "visual.transformer.resblocks.10.mlp.c_fc",
+#     "visual.transformer.resblocks.10.mlp.c_proj",
+#     "visual.transformer.resblocks.11.mlp.c_fc",
+#     "visual.transformer.resblocks.11.mlp.c_proj",
+# ]
+
+lora_target_modules = [
+    "trunk.blocks.46.attn.qkv",
+    "trunk.blocks.46.attn.proj",
+    "trunk.blocks.47.attn.qkv",
+    "trunk.blocks.47.attn.proj",
+    "trunk.blocks.48.attn.qkv",
+    "trunk.blocks.48.attn.proj",
+    "trunk.blocks.49.attn.qkv",
+    "trunk.blocks.49.attn.proj",
+]
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"TRAINING - using: {device}")
-
-MODEL_NAME = "ViT-B-32-quickgelu"
-PRETRAINED_CHECKPOINT = "openai"
 
 LR = 1e-3
 WEIGHT_DECAY = 0.01
 TEMPERATURE = 0.005
 LABEL_SMOOTHING = 0.03
-GRAD_ACCUM_STEPS = 2
 # seed
 SEED = 42
+
+
 
 #==========================================================Error analysis===============================================
 class ErrorAnalyzer:
@@ -392,10 +416,13 @@ def evaluate_with_error_analysis(model, loader, text_features, class_names, erro
     all_top5_preds = []
     total_val_loss = 0
     #forward pass
+    stream = torch.cuda.Stream()
     for images, labels in loader:
-        images, labels = images.to(device), labels.to(device)
+        with torch.cuda.stream(stream):
+            images, labels = images.to(device, non_blocking=True), labels.to(device, non_blocking=True)
+        torch.cuda.current_stream().wait_stream(stream)
 
-        with torch.amp.autocast('cuda'):
+        with autocast('cuda', dtype=torch.bfloat16):
             image_features = model.encode_image(images)
             image_features = image_features / image_features.norm(dim=-1, keepdim=True)
             logits = image_features @ text_features.T
@@ -482,7 +509,7 @@ def validate_initial_forward_pass(model, loader, text_features, device):
         images = images[:4].to(device)
         test_labels = test_labels[:4].to(device)
         
-        with torch.amp.autocast('cuda'):
+        with autocast('cuda', dtype=torch.bfloat16):
             image_features = model.encode_image(images)
             image_features = image_features / image_features.norm(dim=-1, keepdim=True)
             logits = image_features @ text_features.T
@@ -508,51 +535,40 @@ def main():
     if device == "cuda":
         torch.cuda.manual_seed(SEED)
 
+    #load pre trained clip model and applies lora for fine tuning
+    print("\nLoading CLIP model...")
+    clip_model, preprocess_train, preprocess_val = open_clip.create_model_and_transforms(
+            MODEL_NAME,
+            pretrained=PRETRAINED_CHECKPOINT
+        )    
+    clip_model.to(device)
+    clip_model.set_grad_checkpointing(False)
+
     print("Loading datasets...")
     train_dataset = FixedMushroomDataset(
-        TRAIN_CSV, ROOT_MUSHROOM, train_transform(), 
-        max_samples=MAX_TRAIN_SAMPLES, balanced_sampling=True
-    )
-    
+        TRAIN_CSV, ROOT_MUSHROOM, preprocess_train, 
+        max_samples=MAX_TRAIN_SAMPLES, balanced_sampling=True)
     val_dataset = FixedMushroomDataset(
-        VAL_CSV, ROOT_MUSHROOM, val_transform(), 
-        max_samples=None, balanced_sampling=True
-    )
-
+        VAL_CSV, ROOT_MUSHROOM, preprocess_val, 
+        max_samples=None, balanced_sampling=True)
     test_dataset = FixedMushroomDataset(
-        TEST_CSV,
-        ROOT_MUSHROOM,
-        transform=test_transform(),
+        TEST_CSV, ROOT_MUSHROOM, preprocess_val,
         class_mapping=train_dataset.class_to_idx,
-        max_samples=None 
-    )
-#data loading pipelines
-    test_loader = DataLoader(
-    test_dataset,
-    batch_size=BATCH_SIZE,
-    shuffle=False,
-    num_workers=NUM_WORKERS,
-    pin_memory=True,
-    prefetch_factor=5, 
-    persistent_workers=True
-    )
-    
-    val_loader = DataLoader(
-    val_dataset,
-    batch_size=BATCH_SIZE,
-    shuffle=False,
-    num_workers=NUM_WORKERS,
-    pin_memory=True,
-    prefetch_factor=5, 
-    persistent_workers=True
-    )
-    
+        max_samples=None)
 
+    #data loading pipelines
+    test_loader = DataLoader(
+        test_dataset, batch_size=BATCH_SIZE, shuffle=False,
+        num_workers=NUM_WORKERS, prefetch_factor=2, pin_memory=True, persistent_workers=False, 
+        )
+    val_loader = DataLoader(
+        val_dataset, batch_size=BATCH_SIZE, shuffle=False,
+        num_workers=NUM_WORKERS, prefetch_factor=2, pin_memory=True, persistent_workers=False, 
+        )
     train_loader = DataLoader(
         train_dataset, batch_size=BATCH_SIZE, shuffle=True, 
-        num_workers=NUM_WORKERS, pin_memory=True, persistent_workers=True,
-        drop_last=True, prefetch_factor=5, 
-    )
+        num_workers=NUM_WORKERS, prefetch_factor=2, pin_memory=True, persistent_workers=False, 
+        drop_last=True)
 
 
     print(f"\nDataset Info:")
@@ -560,21 +576,21 @@ def main():
     print(f"   Val: {len(test_dataset)} samples")
 #for track errors during evaluation, using erroranalyzer we defined early
     error_analyzer = ErrorAnalyzer(train_dataset.classes)
-#load pre trained clip model and applies lora for fine tuning
-    print("\nLoading CLIP model...")
-    clip_model, _, _ = open_clip.create_model_and_transforms(MODEL_NAME, pretrained=PRETRAINED_CHECKPOINT)
-    clip_model.to(device)
 
+    print("\nConfig Lora model...")
     lora_config = LoraConfig(
         r=LORA_R,
         lora_alpha=LORA_ALPHA,
-        target_modules=Lora_target_modules,
+        target_modules=lora_target_modules,
         lora_dropout=LORA_DROPOUT,
         bias="none",
         task_type="FEATURE_EXTRACTION"
     )
     clip_model = get_peft_model(clip_model, lora_config)
     clip_model.to(device)
+    clip_model = clip_model.to(memory_format=torch.channels_last)
+    # clip_model.visual.set_use_memory_efficient_attention_xformers(True)
+
 #create text embeddings for each mushroom class using prompts
     processor = open_clip.get_tokenizer(MODEL_NAME)
     with open(PROMPT_PATH, "r") as f:
@@ -633,10 +649,10 @@ def main():
         optimizer.zero_grad()
         #batch loop
         for batch_idx, (images, labels) in enumerate(train_loader, 1):
-            images, labels = images.to(device, non_blocking=True), labels.to(device, non_blocking=True)
+            images, labels = images.to(device, non_blocking=True, memory_format=torch.channels_last), labels.to(device, non_blocking=True)
 
             # forward pass with AMP
-            with torch.amp.autocast('cuda'):
+            with autocast('cuda', dtype=torch.bfloat16):
                 image_features = clip_model.encode_image(images)
                 image_features = image_features / image_features.norm(dim=-1, keepdim=True)
                 logits = image_features @ text_features.T
@@ -688,8 +704,8 @@ def main():
                 scaler.update()
                 optimizer.zero_grad()
 
-            # logging every 20 batches
-            if batch_idx % 20 == 0:
+            # logging every 10 lines batches
+            if batch_idx % (accumulation_steps*int (len(train_loader)/(accumulation_steps*20))) == 0:
                 avg_loss = total_loss / processed_batches if processed_batches > 0 else 0
 
                 print(
