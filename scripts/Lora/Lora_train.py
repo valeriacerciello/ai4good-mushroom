@@ -45,7 +45,7 @@ TRAIN_CSV = os.path.join(ROOT_MUSHROOM, "train.csv")
 VAL_CSV = os.path.join(ROOT_MUSHROOM, "val.csv")
 TEST_CSV = os.path.join(ROOT_MUSHROOM, "test.csv")
 PROMPT_PATH = "/zfs/ai4good/student/dkorot/ai4good-mushroom/data_prompts_label/delta_prompts.json"
-CHECKPOINT_DIR = "lora_stable_fixed_b32"
+CHECKPOINT_DIR = "lora_b32"
 MERGED_DATA = "/zfs/ai4good/datasets/mushroom/merged_dataset"
 
 #limits and performance
@@ -258,7 +258,7 @@ def val_transform():
         transforms.Normalize([0.4815, 0.4578, 0.4082], [0.2686, 0.2613, 0.2758])
     ])
 
-class FixedMushroomDataset(Dataset):
+class edMushroomDataset(Dataset):
     def __init__(self, csv_file, root_dir, transform=None, max_samples=None,
                 class_mapping=None, balanced_sampling=True):
         df = pd.read_csv(csv_file, header=0).iloc[:, :2]
@@ -509,17 +509,17 @@ def main():
         torch.cuda.manual_seed(SEED)
 
     print("Loading datasets...")
-    train_dataset = FixedMushroomDataset(
+    train_dataset = edMushroomDataset(
         TRAIN_CSV, ROOT_MUSHROOM, train_transform(), 
         max_samples=MAX_TRAIN_SAMPLES, balanced_sampling=True
     )
     
-    val_dataset = FixedMushroomDataset(
+    val_dataset = edMushroomDataset(
         VAL_CSV, ROOT_MUSHROOM, val_transform(), 
         max_samples=None, balanced_sampling=True
     )
 
-    test_dataset = FixedMushroomDataset(
+    test_dataset = edMushroomDataset(
         TEST_CSV,
         ROOT_MUSHROOM,
         transform=test_transform(),
@@ -763,7 +763,7 @@ def main():
     
     summary_path = os.path.join(CHECKPOINT_DIR, "training_summary.txt")
     with open(summary_path, "w") as f:
-        f.write("Training Summary - Fixed Version\n")
+        f.write("Training Summary\n")
         f.write("="*50 + "\n\n")
         f.write(f"Best Top-1 Accuracy: {best_metrics['top1_acc']:.4f}\n")
         f.write(f"Best Top-5 Accuracy: {best_metrics['top5_acc']:.4f}\n")

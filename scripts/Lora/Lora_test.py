@@ -33,14 +33,14 @@ CHECKPOINT_DIR = "lora_stable_fixed_b32"
 CKPT_PATH = os.path.join(CHECKPOINT_DIR, "best_model.pth")
 MERGED_DATA = "/zfs/ai4good/datasets/mushroom/merged_dataset"
 
-BATCH_SIZE = 128           # smaller default to be safe
+BATCH_SIZE = 128           
 NUM_WORKERS = 4
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 MODEL_NAME = "ViT-B-32-quickgelu"
 PRETRAINED_CHECKPOINT = "laion400m_e32"
 
-# LoRA config (must match training)
+# LoRA config
 LORA_TARGET_MODULES = [
     "visual.transformer.resblocks.10.attn.in_proj",
     "visual.transformer.resblocks.10.attn.out_proj",
@@ -58,7 +58,7 @@ LORA_DROPOUT = 0.1
 NORMALIZE_MEAN = [0.4815, 0.4578, 0.4082]
 NORMALIZE_STD = [0.2686, 0.2613, 0.2758]
 
-# ============= transforms & dataset (same as training) ===========
+# ============= transforms & dataset ===========
 def test_transform():
     return transforms.Compose([
         transforms.Resize(256, interpolation=transforms.InterpolationMode.BICUBIC),
@@ -94,7 +94,7 @@ class FixedMushroomDataset(Dataset):
             if full_path and os.path.exists(full_path):
                 self.data.append((full_path, self.class_to_idx[label_name]))
             else:
-                # skip missing file silently (or consider logging)
+                # skip missing file 
                 pass
 
     def __len__(self):
@@ -168,7 +168,7 @@ def main():
     # model
     clip_model = build_clip_with_lora(DEVICE)
 
-    # load checkpoint (simple)
+    # load checkpoint 
     if not os.path.exists(CKPT_PATH):
         raise FileNotFoundError(f"Checkpoint not found: {CKPT_PATH}")
     ckpt = torch.load(CKPT_PATH, map_location=DEVICE, weights_only=False)
@@ -185,7 +185,7 @@ def main():
 
     clip_model.load_state_dict(state, strict=False)
 
-    # load text_features (assume saved)
+    # load text_features
     if isinstance(ckpt, dict) and 'text_features' in ckpt:
         text_features = ckpt['text_features'].to(DEVICE)
     else:

@@ -136,18 +136,14 @@ def main():
     args = parser.parse_args()
     
     # Load model
-    print(f"Loading model: {args.checkpoint}")
     model, text_features, class_names = load_model(args.checkpoint)
-    print(f"Number of classes: {len(class_names)}")
     
     # Perform prediction
     if args.image:
         # Single image prediction
-        print(f"\nPredicting image: {args.image}")
         results = predict_image(model, text_features, class_names, args.image, args.top_k)
         
         # Display results
-        print("\nPrediction results:")
         for i, r in enumerate(results, 1):
             print(f"{i}. {r['class']}: {r['probability']:.1%}")
         
@@ -155,15 +151,10 @@ def main():
         if args.output:
             with open(args.output, 'w') as f:
                 json.dump({args.image: results}, f, indent=2)
-            print(f"\nResults saved to: {args.output}")
     
     elif args.folder:
         # Batch prediction for folder
-        print(f"\nPredicting folder: {args.folder}")
         all_results = predict_folder(model, text_features, class_names, args.folder, args.top_k)
-        
-        # Display statistics
-        print(f"\nCompleted: {len(all_results)} images processed")
         
         # Save results
         if args.output:
