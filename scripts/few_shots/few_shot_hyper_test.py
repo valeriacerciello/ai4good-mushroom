@@ -1139,7 +1139,6 @@ def evaluate_backbone(backbone: str, args: argparse.Namespace, label_names: List
                 text_embs_for_set = text_embs_bundles.get(prompt_set)
                 if text_embs_for_set is None:
                     continue
-
                 max_workers = min(args.max_workers, max(1, (os.cpu_count() or 4) // 2))
                 with ThreadPoolExecutor(max_workers=max_workers) as ex:
                     futures = []
@@ -1286,7 +1285,6 @@ def _train_and_eval_linear_probe_with_prompts(
     X_te, y_te,
     label_names, text_embs_for_set, K,
     alpha, epochs, lr, batch_size, device, seed, compile_flag,
-    backbone, shot, prompt_set, weight_decay
     backbone, shot, prompt_set, weight_decay
 ):
     """

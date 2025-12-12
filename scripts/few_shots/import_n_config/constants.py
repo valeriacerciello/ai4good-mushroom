@@ -13,8 +13,11 @@ from pathlib import Path
 # Final model backbones:
 #   index 0 -> ViT-B-32-quickgelu  (smaller, used for quick / repro runs)
 #   index 1 -> PE-Core-bigG-14-448 (large backbone used for the final model)
+FINAL_CHECKPOINTS = {
+    "ViT-B-32-quickgelu": "openai",
+    "PE-Core-bigG-14-448": "meta"    
+}
 FINAL_MODEL_BACKBONE_OPTIONS = ["ViT-B-32-quickgelu", "PE-Core-bigG-14-448"]
-
 #   0 -> ViT-B-32 (results get suffix "_b32")
 #   1 -> bigG     (results have no suffix)
 BACKBONE_TOGGLE = 1
@@ -93,7 +96,7 @@ WD_GRID = [0, 1e-4, 5e-4]
 
 # Final model hyperparameters (use BACKBONE_TOGGLE to switch between bigG and B32)
 FINAL_BACKBONE = FINAL_MODEL_BACKBONE_OPTIONS[BACKBONE_TOGGLE]
-FINAL_PRETRAINED = DEFAULT_PRETRAINED[FINAL_BACKBONE]
+FINAL_PRETRAINED = FINAL_CHECKPOINTS[FINAL_BACKBONE]
 FINAL_MODEL_TYPE = "linear+prompts"
 FINAL_SHOTS = 100
 FINAL_PROMPT_SET = "delta"
